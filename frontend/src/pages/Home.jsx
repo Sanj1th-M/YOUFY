@@ -1,0 +1,71 @@
+import { useEffect, useState } from 'react';
+import { TrendingSection, RecentSongs } from '../components/Home/TrendingSection';
+import { getTrending } from '../services/api';
+import useAuthStore from '../store/useAuthStore';
+
+export default function Home() {
+  const [sections, setSections] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const user = useAuthStore(s => s.user);
+
+  useEffect(() => {
+    getTrending()
+      .then(data => setSections(data.sections || []))
+      .catch(() => setError('Could not load trending. Is your backend running?'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  return (
+    <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-10">
+      {/* Greeting */}
+      <div>
+        <h1 className="text-white text-2xl md:text-3xl font-bold">
+          {greeting()}{user?.displayName ? `, ${user.displayName}` : ''}
+        </h1>
+        <p className="text-gray-400 text-sm mt-1">Ad-free music, powered by YouTube</p>
+      </div>
+
+      {/* Recent */}
+      <RecentSongs />
+
+      {/* Trending */}
+      {loading ? (
+        <TrendingSkeleton />
+      ) : error ? (
+        <div className="flex flex-col items-center py-16 gap-3 text-gray-500">
+          <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <p className="text-sm">{error}</p>
+        </div>
+      ) : (
+        <TrendingSection sections={sections} />
+      )}
+    </div>
+  );
+}
+
+function TrendingSkeleton() {
+  return (
+    <section>
+      <div className="h-7 w-32 bg-elevated rounded-lg mb-4 animate-pulse" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {Array(12).fill(0).map((_, i) => (
+          <div key={i} className="animate-pulse">
+            <div className="w-full aspect-square bg-elevated rounded-xl mb-2" />
+            <div className="h-3 bg-elevated rounded w-3/4 mb-1.5" />
+            <div className="h-3 bg-elevated rounded w-1/2" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
