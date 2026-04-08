@@ -19,6 +19,7 @@ frontend/build/
 
 # ── Logs ─────────────────────────────────────────────────
 *.log
+*.pid
 logs/
 npm-debug.log*
 yarn-debug.log*
