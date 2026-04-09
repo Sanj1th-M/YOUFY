@@ -1,8 +1,9 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar   from './Sidebar';
-import BottomBar from './BottomBar';
-import MiniPlayer from '../Player/MiniPlayer';
-import FullPlayer from '../Player/FullPlayer';
+import Sidebar       from './Sidebar';
+import BottomNavBar  from './BottomBar';
+import MiniPlayer    from '../Player/MiniPlayer';
+import DesktopPlayer from '../Player/DesktopPlayer';
+import FullPlayer    from '../Player/FullPlayer';
 import usePlayerStore from '../../store/usePlayerStore';
 
 export default function AppLayout() {
@@ -10,24 +11,34 @@ export default function AppLayout() {
   const showFullPlayer = usePlayerStore(s => s.showFullPlayer);
 
   return (
-    <div className="flex h-screen bg-surface overflow-hidden">
-      {/* Desktop sidebar */}
-      <Sidebar />
+    <div className="flex h-screen w-full bg-black overflow-hidden">
+      {/* Desktop sidebar — fixed left, hidden on mobile */}
+      <Sidebar hasDesktopPlayer={!!currentSong} />
 
       {/* Main content area */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <main className={`flex-1 overflow-y-auto ${currentSong ? 'pb-24 md:pb-28' : 'pb-16 md:pb-0'}`}>
-          <Outlet />
-        </main>
+      <main
+        className={`
+          flex-1 overflow-y-auto
+          md:ml-64
+          ${currentSong
+            ? 'pb-36 md:pb-[110px]'   /* mobile: mini-player + bottom nav | desktop: player bar */
+            : 'pb-16 md:pb-0'          /* mobile: bottom nav only | desktop: nothing */
+          }
+        `}
+      >
+        <Outlet />
+      </main>
 
-        {/* Mini player */}
-        {currentSong && <MiniPlayer />}
-      </div>
+      {/* Mobile: floating mini-player */}
+      {currentSong && <MiniPlayer />}
 
-      {/* Mobile bottom nav */}
-      <BottomBar />
+      {/* Desktop: full player bar */}
+      {currentSong && <DesktopPlayer />}
 
-      {/* Full screen player overlay */}
+      {/* Mobile: bottom navigation */}
+      <BottomNavBar />
+
+      {/* Full-screen player overlay (both platforms) */}
       {showFullPlayer && <FullPlayer />}
     </div>
   );

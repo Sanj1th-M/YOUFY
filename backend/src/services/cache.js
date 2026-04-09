@@ -9,4 +9,13 @@ const searchCache = new NodeCache({ stdTTL: 10 * 60, checkperiod: 120 });
 // Trending cache — TTL 30 minutes
 const trendingCache = new NodeCache({ stdTTL: 30 * 60, checkperiod: 300 });
 
-module.exports = { streamCache, searchCache, trendingCache };
+const recommendationArtistCache = new NodeCache({ stdTTL: 15 * 60, checkperiod: 180 });
+const recommendationPoolCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 120 });
+
+module.exports = {
+  streamCache,
+  searchCache,
+  trendingCache,
+  recommendationArtistCache,
+  recommendationPoolCache,
+};

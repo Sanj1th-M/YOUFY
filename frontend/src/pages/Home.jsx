@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
-import { TrendingSection, RecentSongs } from '../components/Home/TrendingSection';
+import { TrendingSection, RecentlyPlayed } from '../components/Home/TrendingSection';
+import RecommendedSection from '../components/Home/RecommendedSection';
 import { getTrending } from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 
 export default function Home() {
   const [sections, setSections] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const user = useAuthStore(s => s.user);
+
+  const userName = user?.displayName || user?.email?.split('@')[0] || 'Guest';
 
   useEffect(() => {
     getTrending()
@@ -24,19 +27,17 @@ export default function Home() {
   };
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-10">
-      {/* Greeting */}
-      <div>
+    <div className="px-4 md:px-8 py-6 max-w-[1800px] mx-auto space-y-8">
+      <header>
         <h1 className="text-white text-2xl md:text-3xl font-bold">
-          {greeting()}{user?.displayName ? `, ${user.displayName}` : ''}
+          {greeting()}, {userName}
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Ad-free music, powered by YouTube</p>
-      </div>
+        <p className="text-muted text-sm mt-1">Ad-free music, powered by YouTube</p>
+      </header>
 
-      {/* Recent */}
-      <RecentSongs />
+      <RecentlyPlayed />
+      <RecommendedSection />
 
-      {/* Trending */}
       {loading ? (
         <TrendingSkeleton />
       ) : error ? (
@@ -57,11 +58,11 @@ function TrendingSkeleton() {
   return (
     <section>
       <div className="h-7 w-32 bg-elevated rounded-lg mb-4 animate-pulse" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
         {Array(12).fill(0).map((_, i) => (
           <div key={i} className="animate-pulse">
-            <div className="w-full aspect-square bg-elevated rounded-xl mb-2" />
-            <div className="h-3 bg-elevated rounded w-3/4 mb-1.5" />
+            <div className="w-full aspect-square bg-elevated rounded-lg mb-3" />
+            <div className="h-3.5 bg-elevated rounded w-3/4 mb-2" />
             <div className="h-3 bg-elevated rounded w-1/2" />
           </div>
         ))}
