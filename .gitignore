@@ -53,4 +53,5 @@ ecosystem.config.js
 *.tar.gz
 
 # ── Cookies ──────────────────────────────────────────────
-cookies.txt 
+cookies.txt
+backend/cookies.txt

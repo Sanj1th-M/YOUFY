@@ -198,7 +198,7 @@ async function extractWithInnertube(videoId) {
     videoId,
   };
   const res = await axios.post(
-    'https://music.youtube.com/youtubei/v1/player?key=AIzaSyAOghZGza2MQSZkY_zfZ370N-PUdXEo8AI',
+    'https://music.youtube.com/youtubei/v1/player?key=YOUR_INNERTUBE_KEY_HERE',
     body,
     { headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' } }
   );

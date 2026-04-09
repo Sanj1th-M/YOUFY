@@ -4,9 +4,11 @@ export default {
     extend: {
       colors: {
         primary:  '#1DB954',
-        surface:  '#121212',
-        elevated: '#1E1E1E',
+        surface:  '#000000',
+        elevated: '#121212',
         subtle:   '#282828',
+        muted:    '#B3B3B3',
+        card:     '#181818',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

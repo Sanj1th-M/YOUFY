@@ -71,13 +71,16 @@ if (firebaseConfigured) {
 app.use('/search', require('./src/routes/search'));
 app.use('/stream', require('./src/routes/stream'));
 app.use('/trending', require('./src/routes/trending'));
+app.use('/recommendations', require('./src/routes/recommendations'));
 app.use('/lyrics', require('./src/routes/lyrics'));
 app.use('/health', require('./src/routes/health'));
 
 if (firebaseConfigured) {
   app.use('/playlist', verifyToken, require('./src/routes/playlist'));
+  app.use('/recently-played', verifyToken, require('./src/routes/recentlyPlayed'));
 } else {
   app.use('/playlist', firebaseUnavailable);
+  app.use('/recently-played', (req, res) => res.status(204).end());
 }
 
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));

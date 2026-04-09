@@ -19,4 +19,24 @@ async function verifyToken(req, res, next) {
   }
 }
 
-module.exports = { verifyToken };
+async function attachUserIfPresent(req, res, next) {
+  if (!admin.isFirebaseConfigured) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return next();
+  }
+
+  try {
+    const token = authHeader.split('Bearer ')[1];
+    req.user = await admin.auth().verifyIdToken(token);
+  } catch {
+    // Recommendations should still load even if the token is stale.
+  }
+
+  next();
+}
+
+module.exports = { verifyToken, attachUserIfPresent };

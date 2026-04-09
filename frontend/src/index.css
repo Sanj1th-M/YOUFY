@@ -12,15 +12,51 @@
     padding: 0;
   }
   body {
-    background-color: #121212;
+    background-color: #000000;
     color: #ffffff;
     font-family: 'Inter', system-ui, sans-serif;
     overflow: hidden;
   }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #121212; }
-  ::-webkit-scrollbar-thumb { background: #535353; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #727272; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+  /* Custom range slider for volume/progress */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: #535353;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb {
+    opacity: 1;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  input[type="range"]:hover::-moz-range-thumb {
+    opacity: 1;
+  }
 }
 
 @layer utilities {

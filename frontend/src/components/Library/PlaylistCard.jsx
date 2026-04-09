@@ -2,6 +2,7 @@ import { useState } from 'react';
 import usePlaylistStore from '../../store/usePlaylistStore';
 import usePlayerStore   from '../../store/usePlayerStore';
 import SongTile         from '../SongTile';
+import AddSongsModal    from './AddSongsModal';
 
 export default function PlaylistCard({ playlist }) {
   const [open, setOpen]   = useState(false);
@@ -9,8 +10,12 @@ export default function PlaylistCard({ playlist }) {
   const removeSong         = usePlaylistStore(s => s.removeSong);
   const playSong           = usePlayerStore(s => s.playSong);
   const [confirm, setConfirm] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
   const songs = playlist.songs || [];
+  const isSystem = Boolean(playlist.systemKey);
+  const isLikedSongs = playlist.systemKey === 'liked'
+    || String(playlist.name || '').toLowerCase() === 'liked songs';
 
   const playAll = () => {
     if (songs.length > 0) playSong(songs[0], songs.slice(1));
@@ -24,24 +29,65 @@ export default function PlaylistCard({ playlist }) {
         onClick={() => setOpen(!open)}
       >
         {/* Cover — mosaic of first 4 thumbnails */}
-        <div className="w-14 h-14 rounded-lg overflow-hidden grid grid-cols-2 flex-shrink-0 bg-subtle">
-          {songs.slice(0, 4).map((s, i) => (
-            <img key={i} src={s.thumbnail}
-              className="w-full h-full object-cover"
-              onError={e => { e.target.src = '/logo-dark.png'; }}
-              alt="" />
-          ))}
-          {songs.length === 0 && (
-            <div className="col-span-2 row-span-2 flex items-center justify-center text-gray-600">
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/>
-              </svg>
+        <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-subtle">
+          {isLikedSongs ? (
+            <div className="w-full h-full">
+              <img
+                src="/liked-heart.png"
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
             </div>
+          ) : (
+            <div className="w-full h-full grid grid-cols-2">
+              {songs.slice(0, 4).map((s, i) => (
+                <img
+                  key={i}
+                  src={s.thumbnail || '/logo-dark.png'}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  onError={e => { e.target.src = '/logo-dark.png'; }}
+                  alt=""
+                />
+              ))}
+              {songs.length === 0 && (
+                <div className="col-span-2 row-span-2 flex items-center justify-center text-gray-600">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isLikedSongs && songs.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); playAll(); }}
+              aria-label="Play playlist"
+              className="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/35 transition-colors"
+            >
+              <span className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </span>
+            </button>
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-white font-semibold truncate">{playlist.name}</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-white font-semibold truncate">{playlist.name}</p>
+            {isSystem && !isLikedSongs ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-300 flex-shrink-0">
+                Default
+              </span>
+            ) : null}
+          </div>
           <p className="text-gray-400 text-sm">{songs.length} songs</p>
         </div>
 
@@ -56,20 +102,31 @@ export default function PlaylistCard({ playlist }) {
               </svg>
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="text-gray-400 hover:text-white transition-colors px-2 py-1 text-sm font-semibold"
+          >
+            Add songs
+          </button>
           {confirm ? (
             <div className="flex gap-1">
-              <button onClick={() => deletePlaylist(playlist.id)}
-                className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg">Delete</button>
+              {!isSystem && (
+                <button onClick={() => deletePlaylist(playlist.id)}
+                  className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg">Delete</button>
+              )}
               <button onClick={() => setConfirm(false)}
                 className="text-xs bg-subtle text-gray-300 px-2 py-1 rounded-lg">Cancel</button>
             </div>
           ) : (
-            <button onClick={() => setConfirm(true)}
-              className="text-gray-500 hover:text-red-400 transition-colors p-1">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-              </svg>
-            </button>
+            !isSystem && (
+              <button onClick={() => setConfirm(true)}
+                className="text-gray-500 hover:text-red-400 transition-colors p-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
+            )
           )}
           <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
             fill="currentColor" viewBox="0 0 24 24">
@@ -101,6 +158,13 @@ export default function PlaylistCard({ playlist }) {
               ))
           }
         </div>
+      )}
+
+      {showAdd && (
+        <AddSongsModal
+          playlist={playlist}
+          onClose={() => setShowAdd(false)}
+        />
       )}
     </div>
   );

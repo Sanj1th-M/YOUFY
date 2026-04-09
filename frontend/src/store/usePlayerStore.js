@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { audioPlayer } from '../services/audioPlayer';
-import { getStreamUrl } from '../services/api';
+import { getStreamUrl, syncRecentlyPlayed } from '../services/api';
 import { getCachedUrl, setCachedUrl } from '../services/streamCache';
 
 // Fetch stream URL — checks memory cache first, then backend
@@ -55,6 +55,7 @@ const usePlayerStore = create((set, get) => ({
         'recentSongs',
         JSON.stringify([song, ...filtered].slice(0, 20))
       );
+      syncRecentlyPlayed(song);
 
       set({ isPlaying: true, isLoading: false, queue: queueList });
 
@@ -98,6 +99,48 @@ const usePlayerStore = create((set, get) => ({
   },
 
   setQueue: (q) => set({ queue: q }),
+
+  addToQueue: (song) => {
+    if (!song?.videoId) return;
+    set((s) => {
+      const without = s.queue.filter((x) => x?.videoId !== song.videoId);
+      const nextQueue = [...without, song];
+      prefetchNext(nextQueue);
+      return { queue: nextQueue };
+    });
+  },
+
+  removeFromQueue: (videoId) => {
+    if (!videoId) return;
+    set((s) => {
+      const nextQueue = s.queue.filter((x) => x?.videoId !== videoId);
+      prefetchNext(nextQueue);
+      return { queue: nextQueue };
+    });
+  },
+
+  clearQueue: () => set({ queue: [] }),
+
+  moveQueueItem: (fromIndex, toIndex) => {
+    set((s) => {
+      const q = Array.isArray(s.queue) ? [...s.queue] : [];
+      if (fromIndex < 0 || fromIndex >= q.length) return {};
+      if (toIndex < 0 || toIndex >= q.length) return {};
+      const [item] = q.splice(fromIndex, 1);
+      q.splice(toIndex, 0, item);
+      prefetchNext(q);
+      return { queue: q };
+    });
+  },
+
+  playFromQueueIndex: (index) => {
+    const { queue, playSong } = get();
+    if (!Array.isArray(queue) || index < 0 || index >= queue.length) return;
+    const next = queue[index];
+    const rest = [...queue.slice(0, index), ...queue.slice(index + 1)];
+    set({ queue: rest });
+    playSong(next, rest);
+  },
 
   playNext: () => {
     const { queue, currentSong, history, playSong } = get();

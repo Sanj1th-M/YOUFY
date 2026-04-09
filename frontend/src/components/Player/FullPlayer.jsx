@@ -3,6 +3,7 @@ import usePlayerStore from '../../store/usePlayerStore';
 import PlayerControls from './PlayerControls';
 import ProgressBar    from './ProgressBar';
 import LyricsView     from './LyricsView';
+import usePlaylistStore from '../../store/usePlaylistStore';
 
 // Upgrade YouTube thumbnail to highest available resolution
 // YouTube supports: default(120) → mqdefault(320) → hqdefault(480) → sddefault(640) → maxresdefault(1280)
@@ -27,8 +28,11 @@ export default function FullPlayer() {
   const setVolume        = usePlayerStore(s => s.setVolume);
   const setShowFullPlayer = usePlayerStore(s => s.setShowFullPlayer);
   const [tab, setTab]    = useState('player'); // 'player' | 'lyrics'
+  const isSongLiked      = usePlaylistStore(s => s.isSongLiked);
+  const toggleLike       = usePlaylistStore(s => s.toggleLike);
 
   if (!currentSong) return null;
+  const liked = isSongLiked(currentSong.videoId);
 
   return (
     <div className="fixed inset-0 z-50 bg-surface flex flex-col">
@@ -43,7 +47,17 @@ export default function FullPlayer() {
           </svg>
         </button>
         <p className="text-sm text-gray-400 font-medium">Now Playing</p>
-        <div className="w-10" />
+        <button
+          type="button"
+          onClick={() => toggleLike(currentSong)}
+          className={`p-2 rounded-full transition-colors
+            ${liked ? 'text-primary' : 'text-gray-400 hover:text-white'}`}
+          aria-label={liked ? 'Unlike' : 'Like'}
+        >
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+          </svg>
+        </button>
       </div>
 
       {/* Tab switcher */}
@@ -97,6 +111,9 @@ export default function FullPlayer() {
               value={volume}
               onChange={e => setVolume(parseFloat(e.target.value))}
               className="flex-1 accent-primary"
+              style={{
+                background: `linear-gradient(to right, #1DB954 ${volume * 100}%, #535353 ${volume * 100}%)`,
+              }}
             />
             <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>

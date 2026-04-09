@@ -10,6 +10,7 @@ function fmt(s) {
 
 export default function SongTile({ song, queue = [], compact = false }) {
   const playSong      = usePlayerStore(s => s.playSong);
+  const addToQueue    = usePlayerStore(s => s.addToQueue);
   const currentSong   = usePlayerStore(s => s.currentSong);
   const isPlaying     = usePlayerStore(s => s.isPlaying);
   const playlists     = usePlaylistStore(s => s.playlists);
@@ -59,33 +60,47 @@ export default function SongTile({ song, queue = [], compact = false }) {
       )}
 
       {/* Add to playlist menu */}
-      {playlists.length > 0 && (
-        <div className="relative flex-shrink-0">
-          <button
-            onClick={() => setMenu(!menu)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-white"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
-          </button>
-          {menu && (
-            <div className="absolute right-0 bottom-8 bg-elevated border border-subtle rounded-lg
-                            shadow-xl z-20 min-w-40 py-1 overflow-hidden">
-              <p className="text-xs text-gray-500 px-3 py-1">Add to playlist</p>
-              {playlists.map(pl => (
-                <button
-                  key={pl.id}
-                  onClick={() => { addSong(pl.id, song); setMenu(false); }}
-                  className="w-full text-left px-3 py-2 text-sm text-white hover:bg-subtle transition-colors truncate"
-                >
-                  {pl.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="relative flex-shrink-0">
+        <button
+          onClick={() => setMenu(!menu)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-white"
+          aria-label="Song actions"
+          type="button"
+        >
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+          </svg>
+        </button>
+        {menu && (
+          <div className="absolute right-0 bottom-8 bg-elevated border border-subtle rounded-lg
+                          shadow-xl z-20 min-w-44 py-1 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => { addToQueue(song); setMenu(false); }}
+              className="w-full text-left px-3 py-2 text-sm text-white hover:bg-subtle transition-colors truncate"
+            >
+              Add to queue
+            </button>
+
+            {playlists.length > 0 && (
+              <>
+                <div className="h-px bg-white/5 my-1" />
+                <p className="text-xs text-gray-500 px-3 py-1">Add to playlist</p>
+                {playlists.map(pl => (
+                  <button
+                    key={pl.id}
+                    onClick={() => { addSong(pl.id, song); setMenu(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-white hover:bg-subtle transition-colors truncate"
+                    type="button"
+                  >
+                    {pl.name}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
