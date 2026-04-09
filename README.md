@@ -1,4 +1,4 @@
-# 🎵 Youtfly — Ad-Free Music Streaming Web App
+# 🎵 Youfy — Ad-Free Music Streaming Web App
 
 Stream music for free, ad-free, powered by YouTube Music.
 
