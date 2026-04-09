@@ -1,0 +1,25 @@
+{
+  "name": "youfy",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Youfy monorepo (backend + frontend)",
+  "scripts": {
+    "prepare": "husky",
+    "lint-staged": "lint-staged",
+    "secretlint": "secretlint"
+  },
+  "devDependencies": {
+    "@secretlint/secretlint-rule-preset-recommend": "^9.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "secretlint": "^9.3.0"
+  },
+  "lint-staged": {
+    "backend/**/*.{js,cjs,mjs}": [
+      "npm --prefix backend exec -- eslint --max-warnings=0"
+    ],
+    "frontend/**/*.{js,jsx,cjs,mjs}": [
+      "npm --prefix frontend exec -- eslint --max-warnings=0"
+    ]
+  }
+}
