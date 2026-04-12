@@ -60,6 +60,7 @@ r.get('/album/:browseId', async (req, res) => {
 });
 
 // GET /search/artist/:artistId — artist info + popular songs
+// Falls back to searchSongs(name) when topSongs is empty (varies by region)
 r.get('/artist/:artistId', async (req, res) => {
   const { artistId } = req.params;
 
@@ -76,6 +77,24 @@ r.get('/artist/:artistId', async (req, res) => {
     if (!artist) {
       return res.status(500).json({ error: 'Could not load artist.' });
     }
+
+    // ytmusic-api returns topSongs, topAlbums, topSingles (direct arrays)
+    // When topSongs is empty, fall back to searchSongs(artistName)
+    if (
+      Array.isArray(artist.topSongs) &&
+      artist.topSongs.length === 0 &&
+      artist.name
+    ) {
+      try {
+        const fallbackSongs = await searchSongs(artist.name);
+        if (Array.isArray(fallbackSongs) && fallbackSongs.length > 0) {
+          artist.topSongs = fallbackSongs.slice(0, 20);
+        }
+      } catch {
+        // Non-critical — artist page still shows albums/singles
+      }
+    }
+
     searchCache.set(cacheKey, artist);
     res.json(artist);
   } catch (err) {

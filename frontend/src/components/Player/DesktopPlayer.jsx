@@ -18,8 +18,7 @@ export default function DesktopPlayer() {
   const toggleLike  = usePlaylistStore(s => s.toggleLike);
   const [showQueue, setShowQueue] = useState(false);
 
-  if (!currentSong) return null;
-  const liked = isSongLiked(currentSong.videoId);
+  const liked = currentSong ? isSongLiked(currentSong.videoId) : false;
 
   useEffect(() => {
     if (!showQueue) return;
@@ -29,6 +28,8 @@ export default function DesktopPlayer() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showQueue]);
+
+  if (!currentSong) return null;
 
   return (
     <>

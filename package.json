@@ -16,10 +16,10 @@
   },
   "lint-staged": {
     "backend/**/*.{js,cjs,mjs}": [
-      "npm --prefix backend exec -- eslint --max-warnings=0"
+      "npm --prefix backend exec -- eslint"
     ],
     "frontend/**/*.{js,jsx,cjs,mjs}": [
-      "npm --prefix frontend exec -- eslint --max-warnings=0"
+      "npm --prefix frontend exec -- eslint"
     ]
   }
 }

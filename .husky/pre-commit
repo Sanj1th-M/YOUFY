@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+set -eu
+
+echo "Running lint-staged (staged files only)..."
+npx lint-staged
+
+echo "Running secretlint (staged files only)..."
+STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMR | tr '\n' ' ')"
+if [ -n "${STAGED_FILES}" ]; then
+  # secretlint exits non-zero if it finds secrets (blocks commit)
+  npx secretlint ${STAGED_FILES}
+fi
+
+echo "Running npm audit (backend)..."
+npm --prefix backend audit --audit-level=high
+
+echo "Running npm audit (frontend)..."
+npm --prefix frontend audit --audit-level=high

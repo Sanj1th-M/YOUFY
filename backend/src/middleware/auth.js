@@ -33,7 +33,7 @@ async function attachUserIfPresent(req, res, next) {
     const token = authHeader.split('Bearer ')[1];
     req.user = await admin.auth().verifyIdToken(token);
   } catch {
-    // Recommendations should still load even if the token is stale.
+    // Continue without authentication — route should still work for guests.
   }
 
   next();

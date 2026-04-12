@@ -71,7 +71,7 @@ if (firebaseConfigured) {
 app.use('/search', require('./src/routes/search'));
 app.use('/stream', require('./src/routes/stream'));
 app.use('/trending', require('./src/routes/trending'));
-app.use('/recommendations', require('./src/routes/recommendations'));
+
 app.use('/lyrics', require('./src/routes/lyrics'));
 app.use('/health', require('./src/routes/health'));
 

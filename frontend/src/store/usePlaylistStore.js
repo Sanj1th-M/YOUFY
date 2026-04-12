@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import * as api from '../services/api';
+import { updateSongScore } from '../utils/recommendationEngine';
+import useAuthStore from './useAuthStore';
 
 // Local playlist helpers (used when not logged in)
 const LOCAL_KEY = 'youfy_local_playlists';
@@ -80,6 +82,18 @@ const usePlaylistStore = create((set, get) => ({
       await get().removeSong(current.id, song.videoId);
     } else {
       await get().addSong(current.id, song);
+
+      // ── Track LIKED event ──
+      const userId = useAuthStore.getState()?.user?.uid;
+      if (userId) {
+        updateSongScore(userId, song.videoId, {
+          title:           song.title || 'Unknown',
+          artist:          song.artist || 'Unknown',
+          genre:           song.genre || 'unknown',
+          thumbnail:       song.thumbnail || '',
+          durationSeconds: song.durationSeconds || 0,
+        }, 'LIKED');
+      }
     }
   },
 
@@ -191,6 +205,19 @@ const usePlaylistStore = create((set, get) => ({
       try {
         await api.addSongToPlaylist(playlistId, song);
         await get().fetchPlaylists();
+
+        // ── Track ADDED_TO_PLAYLIST event ──
+        const userId = useAuthStore.getState()?.user?.uid;
+        if (userId && song?.videoId) {
+          updateSongScore(userId, song.videoId, {
+            title:           song.title || 'Unknown',
+            artist:          song.artist || 'Unknown',
+            genre:           song.genre || 'unknown',
+            thumbnail:       song.thumbnail || '',
+            durationSeconds: song.durationSeconds || 0,
+          }, 'ADDED_TO_PLAYLIST');
+        }
+
         return;
       } catch (error) {
         saveLocal(ensureLocalLiked(playlists));
@@ -211,6 +238,18 @@ const usePlaylistStore = create((set, get) => ({
     const ensured = ensureLocalLiked(updated);
     saveLocal(ensured);
     set({ playlists: ensured, likedPlaylistId: getLikedPlaylist(ensured)?.id || null });
+
+    // ── Track ADDED_TO_PLAYLIST event (local mode) ──
+    const userId = useAuthStore.getState()?.user?.uid;
+    if (userId && song?.videoId) {
+      updateSongScore(userId, song.videoId, {
+        title:           song.title || 'Unknown',
+        artist:          song.artist || 'Unknown',
+        genre:           song.genre || 'unknown',
+        thumbnail:       song.thumbnail || '',
+        durationSeconds: song.durationSeconds || 0,
+      }, 'ADDED_TO_PLAYLIST');
+    }
   },
 
   removeSong: async (playlistId, videoId) => {

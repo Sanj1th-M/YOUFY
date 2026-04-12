@@ -1,13 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SongTile from '../SongTile';
 import usePlayerStore from '../../store/usePlayerStore';
 import { getArtistSongs } from '../../services/api';
 
 export default function SearchResultTile({ results }) {
   const playSong = usePlayerStore(s => s.playSong);
+  const navigate = useNavigate();
 
   const [activeTab,       setActiveTab]       = useState('all');
-  const [loadingAlbumId,  setLoadingAlbumId]  = useState('');
   const [loadingArtistId, setLoadingArtistId] = useState('');
 
   // Artist page state
@@ -36,28 +37,15 @@ export default function SearchResultTile({ results }) {
 
   const safeActiveTab = tabs.some(t => t.id === activeTab) ? activeTab : 'all';
 
-  // ── Album click — unchanged, was working ──────────────────
-  async function onAlbumClick(album) {
-    const { getAlbumSongs } = await import('../../services/api');
+  // ── Album click — navigate to album detail page ───────────
+  function onAlbumClick(album) {
     const browseId =
       album?.browseId ||
       album?.audioPlaylistId ||
       album?.albumId ||
       album?.playlistId || '';
     if (!browseId) return;
-
-    setLoadingAlbumId(browseId);
-    try {
-      const albumData = await getAlbumSongs(browseId);
-      const rawSongs  = Array.isArray(albumData?.songs) ? albumData.songs : [];
-      const queue     = rawSongs.map(normalizeSong).filter(s => s && s.videoId);
-      if (!queue.length) { window.alert('Could not load album songs.'); return; }
-      playSong(queue[0], queue.slice(1));
-    } catch {
-      window.alert('Could not load album.');
-    } finally {
-      setLoadingAlbumId('');
-    }
+    navigate(`/album/${encodeURIComponent(browseId)}`);
   }
 
   // ── Artist click — THE FIX ────────────────────────────────
@@ -74,12 +62,12 @@ export default function SearchResultTile({ results }) {
       const data = await getArtistSongs(artistId);
 
       // ── CORRECT field access for ytmusic-api getArtist() response ──
-      // data.songs.content  → top songs array
-      // data.albums.content → albums array
-      // data.singles.content → singles array
-      const rawTopSongs = data?.songs?.content     || [];
-      const rawAlbums   = data?.albums?.content    || [];
-      const rawSingles  = data?.singles?.content   || [];
+      // data.topSongs   → top songs array (direct, not nested)
+      // data.topAlbums  → albums array
+      // data.topSingles → singles array
+      const rawTopSongs = Array.isArray(data?.topSongs)   ? data.topSongs   : [];
+      const rawAlbums   = Array.isArray(data?.topAlbums)  ? data.topAlbums  : [];
+      const rawSingles  = Array.isArray(data?.topSingles) ? data.topSingles : [];
 
       const topSongs = rawTopSongs
         .map(s => normalizeSong(s))
@@ -166,54 +154,74 @@ export default function SearchResultTile({ results }) {
           </section>
         )}
 
-        {/* Albums */}
+        {/* Albums — clickable, navigates to album page */}
         {artistPage.albums.length > 0 && (
           <section className="mb-8">
             <h2 className="text-white font-bold text-lg mb-3">Albums</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {artistPage.albums.map((album, i) => (
-                <div key={album?.browseId || i}
-                  className="bg-elevated rounded-xl p-3 hover:bg-subtle transition-colors">
-                  <img
-                    src={getBestThumbnail(album?.thumbnails) || '/logo-dark.png'}
-                    alt={album?.name || 'Album'}
-                    className="w-full aspect-square object-cover rounded-lg mb-2"
-                    onError={e => { e.target.src = '/logo-dark.png'; }}
-                  />
-                  <p className="text-white text-sm font-medium truncate">
-                    {album?.name || 'Unknown'}
-                  </p>
-                  {album?.year && (
-                    <p className="text-gray-400 text-xs mt-0.5">{album.year}</p>
-                  )}
-                </div>
-              ))}
+              {artistPage.albums.map((album, i) => {
+                const albumId = album?.browseId || album?.albumId || album?.playlistId || '';
+                return (
+                  <button
+                    key={albumId || i}
+                    type="button"
+                    onClick={() => albumId && navigate(`/album/${encodeURIComponent(albumId)}`)}
+                    className={[
+                      'bg-elevated rounded-xl p-3 transition-colors text-left',
+                      albumId ? 'hover:bg-subtle cursor-pointer' : 'opacity-60 cursor-not-allowed',
+                    ].join(' ')}
+                  >
+                    <img
+                      src={getBestThumbnail(album?.thumbnails) || '/logo-dark.png'}
+                      alt={album?.name || 'Album'}
+                      className="w-full aspect-square object-cover rounded-lg mb-2"
+                      onError={e => { e.target.src = '/logo-dark.png'; }}
+                    />
+                    <p className="text-white text-sm font-medium truncate">
+                      {album?.name || 'Unknown'}
+                    </p>
+                    {album?.year && (
+                      <p className="text-gray-400 text-xs mt-0.5">{album.year}</p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {/* Singles */}
+        {/* Singles — clickable, navigates to album page */}
         {artistPage.singles.length > 0 && (
           <section className="mb-8">
             <h2 className="text-white font-bold text-lg mb-3">Singles</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {artistPage.singles.map((single, i) => (
-                <div key={single?.browseId || i}
-                  className="bg-elevated rounded-xl p-3 hover:bg-subtle transition-colors">
-                  <img
-                    src={getBestThumbnail(single?.thumbnails) || '/logo-dark.png'}
-                    alt={single?.name || 'Single'}
-                    className="w-full aspect-square object-cover rounded-lg mb-2"
-                    onError={e => { e.target.src = '/logo-dark.png'; }}
-                  />
-                  <p className="text-white text-sm font-medium truncate">
-                    {single?.name || 'Unknown'}
-                  </p>
-                  {single?.year && (
-                    <p className="text-gray-400 text-xs mt-0.5">{single.year}</p>
-                  )}
-                </div>
-              ))}
+              {artistPage.singles.map((single, i) => {
+                const singleId = single?.browseId || single?.albumId || single?.playlistId || '';
+                return (
+                  <button
+                    key={singleId || i}
+                    type="button"
+                    onClick={() => singleId && navigate(`/album/${encodeURIComponent(singleId)}`)}
+                    className={[
+                      'bg-elevated rounded-xl p-3 transition-colors text-left',
+                      singleId ? 'hover:bg-subtle cursor-pointer' : 'opacity-60 cursor-not-allowed',
+                    ].join(' ')}
+                  >
+                    <img
+                      src={getBestThumbnail(single?.thumbnails) || '/logo-dark.png'}
+                      alt={single?.name || 'Single'}
+                      className="w-full aspect-square object-cover rounded-lg mb-2"
+                      onError={e => { e.target.src = '/logo-dark.png'; }}
+                    />
+                    <p className="text-white text-sm font-medium truncate">
+                      {single?.name || 'Unknown'}
+                    </p>
+                    {single?.year && (
+                      <p className="text-gray-400 text-xs mt-0.5">{single.year}</p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </section>
         )}
@@ -338,39 +346,29 @@ export default function SearchResultTile({ results }) {
           <h2 className="text-white font-bold text-lg mb-3">Albums</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {albums.slice(0, 15).map((album, i) => {
-              const id        = album?.browseId || album?.audioPlaylistId ||
-                                album?.albumId  || album?.playlistId || '';
-              const isLoading = id && loadingAlbumId === id;
-              const hasId     = Boolean(id);
+              const id = album?.browseId || album?.audioPlaylistId ||
+                         album?.albumId  || album?.playlistId || '';
+              const hasId = Boolean(id);
 
               return (
                 <button
                   key={id || i}
                   type="button"
-                  disabled={!hasId || isLoading}
-                  onClick={() => hasId && !isLoading && onAlbumClick(album)}
+                  disabled={!hasId}
+                  onClick={() => hasId && onAlbumClick(album)}
                   className={[
                     'bg-elevated rounded-lg p-3 transition-colors text-left',
-                    hasId && !isLoading
+                    hasId
                       ? 'hover:bg-subtle cursor-pointer'
                       : 'opacity-60 cursor-not-allowed',
                   ].join(' ')}
                 >
-                  <div className="relative">
-                    <img
-                      src={getBestThumbnail(album?.thumbnails) || '/logo-dark.png'}
-                      alt={album?.name || 'Album'}
-                      className="w-full aspect-square object-cover rounded mb-2"
-                      onError={e => { e.target.src = '/logo-dark.png'; }}
-                    />
-                    {isLoading && (
-                      <div className="absolute inset-0 rounded bg-black/50
-                                      flex items-center justify-center">
-                        <div className="w-6 h-6 border-2 border-white/60
-                                        border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    )}
-                  </div>
+                  <img
+                    src={getBestThumbnail(album?.thumbnails) || '/logo-dark.png'}
+                    alt={album?.name || 'Album'}
+                    className="w-full aspect-square object-cover rounded mb-2"
+                    onError={e => { e.target.src = '/logo-dark.png'; }}
+                  />
                   <p className="text-white text-sm font-medium truncate">
                     {album?.name || 'Unknown'}
                   </p>

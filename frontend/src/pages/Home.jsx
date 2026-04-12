@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TrendingSection, RecentlyPlayed } from '../components/Home/TrendingSection';
-import RecommendedSection from '../components/Home/RecommendedSection';
+import RecommendedForYou from '../components/Home/RecommendedForYou';
 import { getTrending } from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 
@@ -36,7 +36,8 @@ export default function Home() {
       </header>
 
       <RecentlyPlayed />
-      <RecommendedSection />
+
+      <RecommendedForYou userId={user?.uid} />
 
       {loading ? (
         <TrendingSkeleton />
