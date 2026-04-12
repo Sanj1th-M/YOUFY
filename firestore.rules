@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── User Song Interactions (Recommendation Engine) ──────────
+    // Each user can only read/write their own interaction data.
+    // No cross-user access — prevents data leakage.
+    match /users/{userId}/songInteractions/{docId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // ── Global Songs Catalog ────────────────────────────────────
+    // Any authenticated user can read songs for recommendations.
+    // Write is restricted to server-side (Firebase Admin SDK) only.
+    match /songs/{songId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Admin SDK bypasses rules
+    }
+
+    // ── Existing rules below ────────────────────────────────────
+    // Add your existing rules here (playlists, users, etc.)
+    // This file shows ONLY the rules needed for the recommendation feature.
+  }
+}

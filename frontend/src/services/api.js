@@ -45,18 +45,6 @@ function toRecentSongPayload(song = {}) {
   };
 }
 
-function toRecentHeader(recentSongs = []) {
-  const payload = recentSongs
-    .slice(0, 10)
-    .map(song => ({
-      videoId: song?.videoId || '',
-      artist: song?.artist || '',
-    }))
-    .filter(song => song.videoId || song.artist);
-
-  return payload.length ? JSON.stringify(payload) : '';
-}
-
 // Stream — ALWAYS fetch fresh, NEVER cache in localStorage
 export const getStreamUrl = (videoId) =>
   api.get(`/stream/${videoId}`).then(r => r.data.url);
@@ -64,15 +52,6 @@ export const getStreamUrl = (videoId) =>
 // Trending
 export const getTrending = () =>
   api.get('/trending').then(r => r.data);
-
-// Recommendations
-export const getRecommendations = (recentSongs = []) => {
-  const recentHeader = toRecentHeader(recentSongs);
-
-  return api.get('/recommendations', {
-    headers: recentHeader ? { 'x-recent-songs': recentHeader } : undefined,
-  }).then(r => r.data.tracks || []);
-};
 
 // Lyrics
 export const getLyrics = (title, artist) =>

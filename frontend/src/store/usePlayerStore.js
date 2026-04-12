@@ -2,6 +2,26 @@ import { create } from 'zustand';
 import { audioPlayer } from '../services/audioPlayer';
 import { getStreamUrl, syncRecentlyPlayed } from '../services/api';
 import { getCachedUrl, setCachedUrl } from '../services/streamCache';
+import { updateSongScore } from '../utils/recommendationEngine';
+import { incrementPlayCounter } from '../hooks/useRecommendations';
+import useAuthStore from './useAuthStore';
+
+// ── Helper: get current userId from auth store ──
+function getCurrentUserId() {
+  return useAuthStore.getState()?.user?.uid || null;
+}
+
+// ── Helper: build songMeta from a song object ──
+function toSongMeta(song) {
+  if (!song) return null;
+  return {
+    title:           song.title || 'Unknown',
+    artist:          song.artist || 'Unknown',
+    genre:           song.genre || 'unknown',
+    thumbnail:       song.thumbnail || '',
+    durationSeconds: song.durationSeconds || 0,
+  };
+}
 
 // Fetch stream URL — checks memory cache first, then backend
 async function fetchStreamUrl(videoId) {
@@ -42,6 +62,10 @@ const usePlayerStore = create((set, get) => ({
   error:          null,
 
   playSong: async (song, queueList = []) => {
+    // ── Detect REPLAY before overwriting currentSong ──
+    const prevSong = get().currentSong;
+    const isReplay = prevSong && song && prevSong.videoId === song.videoId;
+
     set({ isLoading: true, error: null, currentSong: song });
     try {
       // Get URL from cache or backend
@@ -62,10 +86,30 @@ const usePlayerStore = create((set, get) => ({
       // Pre-fetch next song URL in background — zero wait when song ends
       prefetchNext(queueList);
 
+      // ── Track REPLAY event ──
+      if (isReplay) {
+        const userId = getCurrentUserId();
+        if (userId) {
+          updateSongScore(userId, song.videoId, toSongMeta(song), 'REPLAY');
+        }
+      }
+
+      // ── Increment play counter for auto-refresh ──
+      const uid = getCurrentUserId();
+      if (uid) incrementPlayCounter(uid);
+
       audioPlayer.onTimeUpdate(() =>
         set({ currentTime: audioPlayer.currentTime, duration: audioPlayer.duration })
       );
       audioPlayer.onEnded(() => {
+        // ── Track FULL_LISTEN (listened > 80% of duration) ──
+        const { currentTime, duration, currentSong: endedSong } = get();
+        if (endedSong && duration > 0 && (currentTime / duration) > 0.8) {
+          const recUserId = getCurrentUserId();
+          if (recUserId) {
+            updateSongScore(recUserId, endedSong.videoId, toSongMeta(endedSong), 'FULL_LISTEN');
+          }
+        }
         set({ isPlaying: false });
         get().playNext();
       });
@@ -143,7 +187,16 @@ const usePlayerStore = create((set, get) => ({
   },
 
   playNext: () => {
-    const { queue, currentSong, history, playSong } = get();
+    const { queue, currentSong, history, playSong, currentTime } = get();
+
+    // ── Track SKIPPED (skipped before 30 seconds) ──
+    if (currentSong && currentTime < 30) {
+      const userId = getCurrentUserId();
+      if (userId) {
+        updateSongScore(userId, currentSong.videoId, toSongMeta(currentSong), 'SKIPPED');
+      }
+    }
+
     if (currentSong) set(s => ({ history: [currentSong, ...s.history].slice(0, 50) }));
     if (queue.length > 0) {
       const [next, ...rest] = queue;
