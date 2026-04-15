@@ -6,6 +6,7 @@ import Search from './pages/Search';
 import Library from './pages/Library';
 import Profile from './pages/Profile';
 import AlbumPage from './pages/AlbumPage';
+import PlaylistPage from './pages/PlaylistPage';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import useAuthStore from './store/useAuthStore';
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/album/:browseId" element={<AlbumPage />} />
+        <Route path="/playlist/:playlistId" element={<PlaylistPage />} />
         <Route path="/library" element={<Library />} />
         <Route path="/profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>

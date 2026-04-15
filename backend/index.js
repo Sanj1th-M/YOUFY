@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -23,9 +24,9 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-      mediaSrc: ["'self'", 'https:', 'blob:'],
+      styleSrc: ["'self'", "'unsafe-inline'"],  // Required for React inline styles
+      imgSrc: ["'self'", 'data:', 'blob:', 'https://*.googleusercontent.com', 'https://*.ytimg.com', 'https://*.ggpht.com'],
+      mediaSrc: ["'self'", 'blob:', 'https://*.googlevideo.com'],
       connectSrc: [
         "'self'",
         'https://www.googleapis.com',
@@ -34,9 +35,12 @@ app.use(helmet({
       ],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
+      formAction: ["'self'"],
+      baseUri: ["'self'"],
       upgradeInsecureRequests: isProd ? [] : null,
     },
   },
+  hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
 }));
 
 const allowedOrigins = [
@@ -56,7 +60,15 @@ app.use(cors({
   credentials: true,
 }));
 
+// Reject oversized URLs to prevent memory-based DoS
+app.use((req, res, next) => {
+  if (req.url.length > 2048) {
+    return res.status(414).json({ error: 'URI too long' });
+  }
+  next();
+});
 app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ limit: '10kb', extended: false }));
 app.use(morgan(isProd ? 'combined' : 'dev'));
 app.use(limiter);
 app.disable('x-powered-by');
@@ -86,15 +98,13 @@ if (firebaseConfigured) {
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 
 app.use((err, req, res, next) => {
+  // Log full details server-side only
   console.error(`[${new Date().toISOString()}] ERROR:`, err.message);
-  if (!isProd) {
-    console.error(err.stack);
-  }
+  if (!isProd) console.error(err.stack);
 
   const status = err.status || 500;
-  res.status(status).json({
-    error: isProd ? 'Something went wrong' : err.message,
-  });
+  // Never expose internal error details to clients, even in dev
+  res.status(status).json({ error: 'Something went wrong. Please try again.' });
 });
 
 startBackgroundServices();

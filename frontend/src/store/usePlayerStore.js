@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import { audioPlayer } from '../services/audioPlayer';
 import { getStreamUrl, syncRecentlyPlayed } from '../services/api';
-import { getCachedUrl, setCachedUrl } from '../services/streamCache';
+import { getCachedUrl, setCachedUrl, removeCachedUrl } from '../services/streamCache';
 import { updateSongScore } from '../utils/recommendationEngine';
 import { incrementPlayCounter } from '../hooks/useRecommendations';
 import useAuthStore from './useAuthStore';
+
+// ── Request generation counter — used to detect stale playSong calls ──
+let playRequestId = 0;
 
 // ── Helper: get current userId from auth store ──
 function getCurrentUserId() {
@@ -35,18 +38,19 @@ async function fetchStreamUrl(videoId) {
   return url;
 }
 
-// Pre-fetch next song's URL in background so it plays instantly
+// Pre-fetch upcoming songs' URLs in background so they play instantly
 function prefetchNext(queue) {
   if (!queue || queue.length === 0) return;
-  const next = queue[0];
-  if (!next?.videoId || getCachedUrl(next.videoId)) return;
-  // Fire and forget — no await, runs in background
-  getStreamUrl(next.videoId)
-    .then(url => {
-      setCachedUrl(next.videoId, url);
-      console.log(`[prefetch] cached next: ${next.title}`);
-    })
-    .catch(() => {}); // silent fail — not critical
+  // Prefetch up to 3 upcoming songs for smoother playback
+  const toFetch = queue.slice(0, 3).filter(s => s?.videoId && !getCachedUrl(s.videoId));
+  toFetch.forEach(song => {
+    getStreamUrl(song.videoId)
+      .then(url => {
+        setCachedUrl(song.videoId, url);
+        console.log(`[prefetch] cached: ${song.title}`);
+      })
+      .catch(() => {}); // silent fail — not critical
+  });
 }
 
 const usePlayerStore = create((set, get) => ({
@@ -62,15 +66,36 @@ const usePlayerStore = create((set, get) => ({
   error:          null,
 
   playSong: async (song, queueList = []) => {
+    if (!song?.videoId) return;
+
+    // ── Increment request ID to invalidate any in-flight requests ──
+    const thisRequestId = ++playRequestId;
+
     // ── Detect REPLAY before overwriting currentSong ──
     const prevSong = get().currentSong;
     const isReplay = prevSong && song && prevSong.videoId === song.videoId;
 
-    set({ isLoading: true, error: null, currentSong: song });
+    // Show loading state immediately with the new song info
+    set({ isLoading: true, error: null, currentSong: song, queue: queueList });
+
     try {
       // Get URL from cache or backend
       const url = await fetchStreamUrl(song.videoId);
+
+      // ── STALE CHECK: if user clicked another song while we were fetching, bail out ──
+      if (thisRequestId !== playRequestId) {
+        console.log(`[player] discarding stale request for: ${song.title}`);
+        return;
+      }
+
+      // Play the audio — audioPlayer.play() will abort any previous load
       await audioPlayer.play(url, song);
+
+      // ── STALE CHECK again after play() (which also awaits) ──
+      if (thisRequestId !== playRequestId) {
+        console.log(`[player] discarding stale request (post-play) for: ${song.title}`);
+        return;
+      }
 
       // Save to recent songs (metadata only — never the stream URL)
       const recent = JSON.parse(localStorage.getItem('recentSongs') || '[]');
@@ -81,7 +106,7 @@ const usePlayerStore = create((set, get) => ({
       );
       syncRecentlyPlayed(song);
 
-      set({ isPlaying: true, isLoading: false, queue: queueList });
+      set({ isPlaying: true, isLoading: false });
 
       // Pre-fetch next song URL in background — zero wait when song ends
       prefetchNext(queueList);
@@ -114,6 +139,9 @@ const usePlayerStore = create((set, get) => ({
         get().playNext();
       });
       audioPlayer.onError(() => {
+        if (song?.videoId) {
+          removeCachedUrl(song.videoId);
+        }
         set({ isPlaying: false, isLoading: false, error: 'Playback error. Try again.' });
       });
       audioPlayer.onWaiting(() => set({ isLoading: true }));
@@ -123,15 +151,37 @@ const usePlayerStore = create((set, get) => ({
       window.__youfyPrev = get().playPrev;
 
     } catch (err) {
-      set({ isPlaying: false, isLoading: false, error: 'Could not load song. Try again.' });
-      console.error('[player] error:', err.message);
+      // Ignore AbortErrors — they're expected when user clicks a new song
+      if (err?.name === 'AbortError' || err?.message?.includes('Aborted')) {
+        console.log(`[player] aborted load for: ${song.title} (user picked a new song)`);
+        return;
+      }
+      // Only show error if this is still the active request
+      if (thisRequestId === playRequestId) {
+        removeCachedUrl(song.videoId);
+        set({ isPlaying: false, isLoading: false, error: 'Could not load song. Try again.' });
+        console.error('[player] error:', err.message);
+      }
     }
   },
 
-  togglePlay: () => {
-    const { isPlaying } = get();
-    if (isPlaying) { audioPlayer.pause(); set({ isPlaying: false }); }
-    else           { audioPlayer.resume(); set({ isPlaying: true }); }
+  togglePlay: async () => {
+    const { isPlaying, currentSong } = get();
+    if (!currentSong) return;
+
+    if (isPlaying) {
+      audioPlayer.pause();
+      set({ isPlaying: false, error: null });
+      return;
+    }
+
+    try {
+      await audioPlayer.resume();
+      set({ isPlaying: true, error: null });
+    } catch (err) {
+      set({ isPlaying: false, error: 'Could not resume playback. Try another song.' });
+      console.error('[player] resume failed:', err?.message || err);
+    }
   },
 
   seek: (s) => { audioPlayer.seek(s); set({ currentTime: s }); },

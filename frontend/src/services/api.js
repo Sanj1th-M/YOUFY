@@ -46,8 +46,9 @@ function toRecentSongPayload(song = {}) {
 }
 
 // Stream — ALWAYS fetch fresh, NEVER cache in localStorage
+// Longer timeout for stream since yt-dlp extraction can take 10-20s
 export const getStreamUrl = (videoId) =>
-  api.get(`/stream/${videoId}`).then(r => r.data.url);
+  api.get(`/stream/${videoId}`, { timeout: 30000 }).then(r => r.data.url);
 
 // Trending
 export const getTrending = () =>
@@ -82,3 +83,7 @@ export const getAlbumSongs = (browseId) =>
 // Fetch artist popular songs — called when user taps an artist card
 export const getArtistSongs = (artistId) =>
   api.get(`/search/artist/${artistId}`).then(r => r.data);
+
+// Fetch playlist info + videos — called when user taps a playlist card
+export const getPlaylistSongs = (playlistId) =>
+  api.get(`/search/playlist/${playlistId}`).then(r => r.data);

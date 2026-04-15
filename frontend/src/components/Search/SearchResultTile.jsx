@@ -387,28 +387,41 @@ export default function SearchResultTile({ results }) {
       {(safeActiveTab === 'all' || safeActiveTab === 'playlists') &&
         playlists.length > 0 && (
         <section>
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <h2 className="text-white font-bold text-lg">Playlists</h2>
-            <span className="text-xs text-gray-500">Coming soon</span>
-          </div>
+          <h2 className="text-white font-bold text-lg mb-3">Playlists</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {playlists.slice(0, 15).map((p, i) => (
-              <div key={p?.playlistId || i} className="bg-elevated rounded-lg p-3 opacity-90">
-                <img
-                  src={getBestThumbnail(p?.thumbnails) || '/logo-dark.png'}
-                  alt={p?.name || 'Playlist'}
-                  className="w-full aspect-square object-cover rounded mb-2"
-                  onError={e => { e.target.src = '/logo-dark.png'; }}
-                />
-                <p className="text-white text-sm font-medium truncate">
-                  {p?.name || 'Unknown'}
-                </p>
-                <p className="text-gray-400 text-xs truncate">
-                  {p?.author?.name || p?.artist?.name || ''}
-                  {typeof p?.trackCount === 'number' ? ` • ${p.trackCount} songs` : ''}
-                </p>
-              </div>
-            ))}
+            {playlists.slice(0, 15).map((p, i) => {
+              const id = p?.playlistId || p?.browseId || '';
+              const hasId = Boolean(id);
+
+              return (
+                <button
+                  key={id || i}
+                  type="button"
+                  disabled={!hasId}
+                  onClick={() => hasId && navigate(`/playlist/${encodeURIComponent(id)}`)}
+                  className={[
+                    'bg-elevated rounded-lg p-3 transition-colors text-left',
+                    hasId
+                      ? 'hover:bg-subtle cursor-pointer'
+                      : 'opacity-60 cursor-not-allowed',
+                  ].join(' ')}
+                >
+                  <img
+                    src={getBestThumbnail(p?.thumbnails) || '/logo-dark.png'}
+                    alt={p?.name || 'Playlist'}
+                    className="w-full aspect-square object-cover rounded mb-2"
+                    onError={e => { e.target.src = '/logo-dark.png'; }}
+                  />
+                  <p className="text-white text-sm font-medium truncate">
+                    {p?.name || 'Unknown'}
+                  </p>
+                  <p className="text-gray-400 text-xs truncate">
+                    {p?.author?.name || p?.artist?.name || ''}
+                    {typeof p?.trackCount === 'number' ? ` • ${p.trackCount} songs` : ''}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </section>
       )}

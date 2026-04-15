@@ -68,6 +68,26 @@ async function getHomeSections() {
   return await client.getHomeSections();
 }
 
+async function getPlaylist(playlistId) {
+  const client = await getClient();
+  try {
+    return await client.getPlaylist(playlistId);
+  } catch (err) {
+    console.error('[ytmusic] getPlaylist failed:', err.message);
+    return null;
+  }
+}
+
+async function getPlaylistVideos(playlistId) {
+  const client = await getClient();
+  try {
+    return await client.getPlaylistVideos(playlistId);
+  } catch (err) {
+    console.error('[ytmusic] getPlaylistVideos failed:', err.message);
+    return [];
+  }
+}
+
 module.exports = {
   searchSongs,
   searchAlbums,
@@ -76,4 +96,6 @@ module.exports = {
   getAlbum,
   getArtist,
   getHomeSections,
+  getPlaylist,
+  getPlaylistVideos,
 };
