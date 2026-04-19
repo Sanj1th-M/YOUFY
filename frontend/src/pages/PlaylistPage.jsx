@@ -10,8 +10,8 @@ function getBestThumbnail(thumbnails, fallback = '') {
   const url = thumbnails[thumbnails.length - 1]?.url || fallback;
   if (!url) return fallback;
   return url
-    .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')
-    .replace(/=s\d+/, '=s1280');
+    .replace(/=w\d+-h\d+/, '=w512-h512')
+    .replace(/=s\d+/, '=s512');
 }
 
 // Normalize ytmusic-api video/song → app Song shape
@@ -21,13 +21,13 @@ function normalizeSong(s) {
   return {
     videoId:         s.videoId || '',
     title:           s.name || s.title || 'Unknown',
-    artist:          s.artist?.name
-                  || s.artists?.[0]?.name
+    artist:          (typeof s.artist === 'string' ? s.artist : s.artist?.name)
+                  || (Array.isArray(s.artists) ? s.artists[0]?.name : null)
                   || s.author?.name
                   || 'Unknown',
     thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
     durationSeconds: s.duration || s.durationSeconds || 0,
-    album:           s.album?.name || s.album || '',
+    album:           (typeof s.album === 'string' ? s.album : s.album?.name) || '',
   };
 }
 

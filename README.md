@@ -35,7 +35,16 @@ Open http://localhost:5173
 PORT=3000
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_PRIVATE_KEY="<service-account-private-key-with-escaped-newlines>"
+PUBLIC_BACKEND_URL=http://localhost:3000
+PLAYLIST_IMPORT_ENABLED=false
+PLAYLIST_IMPORT_ROLLOUT_PERCENT=10
+PLAYLIST_IMPORT_ENCRYPTION_KEY=<32-byte-base64-or-hex-key>
+REDIS_URL=redis://localhost:6379
+SPOTIFY_CLIENT_ID=...
+SPOTIFY_CLIENT_SECRET=...
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
 ```
 
 ### frontend/.env
@@ -69,6 +78,18 @@ VITE_FIREBASE_APP_ID=...
 | Auth | Firebase Auth |
 | Database | Firebase Firestore |
 | Lyrics | lrclib.net (free) |
+| Playlist Import | Spotify Web API + YouTube Data API v3 + BullMQ |
+
+## Playlist Import
+
+The playlist import system is isolated behind the `playlist_import_enabled` feature flag and a rollout percentage gate.
+
+- Backend routes live under `/playlist-import`
+- OAuth tokens are stored only on the backend and encrypted with AES-256-GCM
+- Spotify uses Authorization Code with PKCE and the `playlist-read-private` scope
+- YouTube Music import uses YouTube Data API v3 with the `https://www.googleapis.com/auth/youtube.readonly` scope
+- Matching runs asynchronously through BullMQ when `REDIS_URL` is configured, with an in-process fallback for local development
+- Imported tracks are written as normal Youfy playlists, so the existing playlist and player flows stay unchanged
 
 ## Deployment
 

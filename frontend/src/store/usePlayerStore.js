@@ -8,6 +8,7 @@ import useAuthStore from './useAuthStore';
 
 // ── Request generation counter — used to detect stale playSong calls ──
 let playRequestId = 0;
+const streamRequestCache = new Map();
 
 // ── Helper: get current userId from auth store ──
 function getCurrentUserId() {
@@ -33,9 +34,42 @@ async function fetchStreamUrl(videoId) {
     console.log(`[cache] stream hit: ${videoId}`);
     return cached;
   }
-  const url = await getStreamUrl(videoId);
-  setCachedUrl(videoId, url);
-  return url;
+
+  if (streamRequestCache.has(videoId)) {
+    console.log(`[cache] stream in-flight: ${videoId}`);
+    return streamRequestCache.get(videoId);
+  }
+
+  const request = getStreamUrl(videoId)
+    .then((url) => {
+      setCachedUrl(videoId, url);
+      return url;
+    })
+    .finally(() => {
+      streamRequestCache.delete(videoId);
+    });
+
+  streamRequestCache.set(videoId, request);
+  return request;
+}
+
+function warmStreamUrl(videoId) {
+  if (!videoId || getCachedUrl(videoId) || streamRequestCache.has(videoId)) {
+    return;
+  }
+
+  fetchStreamUrl(videoId).catch(() => {});
+}
+
+function warmQueueSongs(queue) {
+  if (!queue || queue.length === 0) return;
+
+  queue
+    .filter((song) => song?.videoId)
+    .slice(0, 1)
+    .forEach((song) => {
+      warmStreamUrl(song.videoId);
+    });
 }
 
 // Pre-fetch upcoming songs' URLs in background so they play instantly
@@ -109,7 +143,7 @@ const usePlayerStore = create((set, get) => ({
       set({ isPlaying: true, isLoading: false });
 
       // Pre-fetch next song URL in background — zero wait when song ends
-      prefetchNext(queueList);
+      warmQueueSongs(queueList);
 
       // ── Track REPLAY event ──
       if (isReplay) {
@@ -199,7 +233,7 @@ const usePlayerStore = create((set, get) => ({
     set((s) => {
       const without = s.queue.filter((x) => x?.videoId !== song.videoId);
       const nextQueue = [...without, song];
-      prefetchNext(nextQueue);
+      warmQueueSongs(nextQueue);
       return { queue: nextQueue };
     });
   },
@@ -208,7 +242,7 @@ const usePlayerStore = create((set, get) => ({
     if (!videoId) return;
     set((s) => {
       const nextQueue = s.queue.filter((x) => x?.videoId !== videoId);
-      prefetchNext(nextQueue);
+      warmQueueSongs(nextQueue);
       return { queue: nextQueue };
     });
   },
@@ -222,9 +256,18 @@ const usePlayerStore = create((set, get) => ({
       if (toIndex < 0 || toIndex >= q.length) return {};
       const [item] = q.splice(fromIndex, 1);
       q.splice(toIndex, 0, item);
-      prefetchNext(q);
+      warmQueueSongs(q);
       return { queue: q };
     });
+  },
+
+  warmSong: (song) => {
+    if (!song?.videoId) return;
+    warmStreamUrl(song.videoId);
+  },
+
+  warmSongs: (songs = []) => {
+    warmQueueSongs(songs);
   },
 
   playFromQueueIndex: (index) => {

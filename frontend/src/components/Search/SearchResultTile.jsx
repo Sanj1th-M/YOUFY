@@ -16,9 +16,7 @@ export default function SearchResultTile({ results }) {
   // artistPage shape when set:
   // { name, thumbnail, topSongs: [...], albums: [...], singles: [...] }
 
-  if (!results) return null;
-
-  const { songs = [], albums = [], artists = [], playlists = [] } = results;
+  const { songs = [], albums = [], artists = [], playlists = [] } = results || {};
 
   const normalizedSongs = songs
     .map(normalizeSong)
@@ -26,6 +24,8 @@ export default function SearchResultTile({ results }) {
 
   const hasAnyResults =
     normalizedSongs.length || albums.length || artists.length || playlists.length;
+
+  if (!results) return null;
 
   const tabs = [
     { id: 'all',       label: 'All',       show: true },
@@ -436,8 +436,8 @@ function getBestThumbnail(thumbnails, fallback = '') {
   const url = thumbnails[thumbnails.length - 1]?.url || fallback;
   if (!url) return fallback;
   return url
-    .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')
-    .replace(/=s\d+/, '=s1280');
+    .replace(/=w\d+-h\d+/, '=w512-h512')
+    .replace(/=s\d+/, '=s512');
 }
 
 function normalizeSong(s) {
@@ -445,12 +445,12 @@ function normalizeSong(s) {
   return {
     videoId:         s.videoId || '',
     title:           s.name || s.title || 'Unknown',
-    artist:          s.artist?.name
-                  || s.artists?.[0]?.name
+    artist:          (typeof s.artist === 'string' ? s.artist : s.artist?.name)
+                  || (Array.isArray(s.artists) ? s.artists[0]?.name : null)
                   || s.author?.name
                   || 'Unknown',
     thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
     durationSeconds: s.duration || s.durationSeconds || 0,
-    album:           s.album?.name || s.album || '',
+    album:           (typeof s.album === 'string' ? s.album : s.album?.name) || '',
   };
-      }
+}

@@ -8,6 +8,9 @@ const firebaseAdmin = require('./src/config/firebase');
 const { limiter, authLimiter } = require('./src/middleware/rateLimit');
 const { verifyToken } = require('./src/middleware/auth');
 const { startBackgroundServices } = require('./src/services/ytdlpUpdater');
+const { isPlaylistImportEnabled } = require('./src/modules/playlistImport/config');
+const { createPlaylistImportRouter } = require('./src/modules/playlistImport/router');
+const { startPlaylistImportWorker } = require('./src/modules/playlistImport/queue');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +54,11 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, cb) => {
+    // Dev convenience: allow any localhost port so Vite can move ports without breaking.
+    if (!isProd && origin && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+      return cb(null, true);
+    }
+
     if (!origin || allowedOrigins.includes(origin)) {
       return cb(null, true);
     }
@@ -86,6 +94,7 @@ app.use('/trending', require('./src/routes/trending'));
 
 app.use('/lyrics', require('./src/routes/lyrics'));
 app.use('/health', require('./src/routes/health'));
+app.use('/playlist-import', createPlaylistImportRouter());
 
 if (firebaseConfigured) {
   app.use('/playlist', verifyToken, require('./src/routes/playlist'));
@@ -108,5 +117,8 @@ app.use((err, req, res, next) => {
 });
 
 startBackgroundServices();
+if (firebaseConfigured && isPlaylistImportEnabled()) {
+  startPlaylistImportWorker();
+}
 
 app.listen(PORT, () => console.log(`Youtfly backend running on port ${PORT}`));

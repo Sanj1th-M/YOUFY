@@ -5,6 +5,7 @@
 
 const { Router } = require('express');
 const { getStreamInfo } = require('../services/ytdlp');
+const { isPlaylistImportEnabled } = require('../modules/playlistImport/config');
 
 const STREAM_TEST_VIDEO_ID = 'dQw4w9WgXcQ';
 const STREAM_TEST_COOLDOWN_MS = 60 * 1000;
@@ -18,6 +19,7 @@ router.get('/', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
+    playlistImportEnabled: isPlaylistImportEnabled(),
   });
 });
 
@@ -42,9 +44,10 @@ router.get('/stream', async (req, res) => {
 
     return res.json(payload);
   } catch (error) {
+    console.error('[health/stream] probe failed:', error.message);
     const payload = {
       status: 'broken',
-      error: error.message,
+      playable: false,
     };
 
     lastStreamCheck = {

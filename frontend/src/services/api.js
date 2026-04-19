@@ -48,7 +48,7 @@ function toRecentSongPayload(song = {}) {
 // Stream — ALWAYS fetch fresh, NEVER cache in localStorage
 // Longer timeout for stream since yt-dlp extraction can take 10-20s
 export const getStreamUrl = (videoId) =>
-  api.get(`/stream/${videoId}`, { timeout: 30000 }).then(r => r.data.url);
+  api.get(`/stream/${videoId}`, { timeout: 60000 }).then(r => r.data.url);
 
 // Trending
 export const getTrending = () =>
@@ -87,3 +87,25 @@ export const getArtistSongs = (artistId) =>
 // Fetch playlist info + videos — called when user taps a playlist card
 export const getPlaylistSongs = (playlistId) =>
   api.get(`/search/playlist/${playlistId}`).then(r => r.data);
+
+// Playlist import
+export const getPlaylistImportConfig = () =>
+  api.get('/playlist-import/config').then(r => r.data);
+
+export const getPlaylistImportSources = () =>
+  api.get('/playlist-import/sources').then(r => r.data.sources);
+
+export const startPlaylistImportOAuth = (source) =>
+  api.post(`/playlist-import/oauth/${source}/start`).then(r => r.data);
+
+export const getImportSourcePlaylists = (source) =>
+  api.get(`/playlist-import/sources/${source}/playlists`).then(r => r.data.playlists);
+
+export const previewPlaylistImport = (source, playlistId) =>
+  api.post(`/playlist-import/sources/${source}/preview`, { playlistId }).then(r => r.data.job);
+
+export const getPlaylistImportJob = (jobId) =>
+  api.get(`/playlist-import/jobs/${jobId}`).then(r => r.data.job);
+
+export const confirmPlaylistImport = (jobId) =>
+  api.post(`/playlist-import/jobs/${jobId}/confirm`).then(r => r.data);

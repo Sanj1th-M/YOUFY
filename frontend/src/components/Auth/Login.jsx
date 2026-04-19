@@ -75,7 +75,7 @@ export default function Login() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo-dark.png" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
+          <img src="/logo.svg" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
           <h1 className="text-white text-2xl font-bold">Youfy</h1>
           <p className="text-gray-400 text-sm mt-1">Log in to your account</p>
         </div>

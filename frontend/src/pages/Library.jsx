@@ -40,16 +40,27 @@ export default function Library() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => setShowInput(!showInput)}
-          className="flex items-center gap-2 bg-primary text-black text-sm font-bold
-                     px-4 py-2 rounded-full hover:scale-105 transition-transform"
-        >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 13H13v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-          </svg>
-          New Playlist
-        </button>
+        <div className="flex items-center gap-2">
+          {user && (
+            <Link
+              to="/import-playlist"
+              className="flex items-center gap-2 border border-subtle text-white text-sm font-semibold
+                         px-4 py-2 rounded-full hover:border-white/20 transition-colors"
+            >
+              Import
+            </Link>
+          )}
+          <button
+            onClick={() => setShowInput(!showInput)}
+            className="flex items-center gap-2 bg-primary text-black text-sm font-bold
+                       px-4 py-2 rounded-full hover:scale-105 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 13H13v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            New Playlist
+          </button>
+        </div>
       </div>
 
       {/* Create playlist input */}
