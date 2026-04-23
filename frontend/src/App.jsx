@@ -31,11 +31,17 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-surface">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="text-gray-400 text-sm">Loading Youfy...</p>
+      <div className="youfy-loader-screen">
+        <div className="youfy-eq" aria-hidden="true">
+          <span className="youfy-eq-bar" />
+          <span className="youfy-eq-bar" />
+          <span className="youfy-eq-bar" />
+          <span className="youfy-eq-bar" />
         </div>
+
+        <p className="youfy-loader-copy" role="status" aria-live="polite">
+          Loading your music...
+        </p>
       </div>
     );
   }

@@ -77,7 +77,7 @@ export default function Register() {
       <div className="w-full max-w-sm">
 
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.svg" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
+          <img src="/logo.svg?v=2" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
           <h1 className="text-white text-2xl font-bold">Join Youfy</h1>
           <p className="text-gray-400 text-sm mt-1">Create your free account</p>
         </div>

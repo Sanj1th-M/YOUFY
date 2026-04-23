@@ -22,7 +22,7 @@ function formatDuration(seconds) {
 }
 
 function statusTone(status) {
-  if (status === 'matched') return 'text-primary';
+  if (status === 'matched') return 'text-[#FCFFF9]';
   if (status === 'unmatched') return 'text-amber-400';
   return 'text-gray-400';
 }
@@ -58,7 +58,7 @@ export default function ImportPlaylist() {
 
   const [config, setConfig] = useState(null);
   const [sources, setSources] = useState([]);
-  const [selectedSource, setSelectedSource] = useState('spotify');
+  const [selectedSource, setSelectedSource] = useState('youtube');
   const [playlists, setPlaylists] = useState([]);
   const [loadingSources, setLoadingSources] = useState(true);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
@@ -302,12 +302,12 @@ export default function ImportPlaylist() {
           </button>
           <h1 className="text-white text-3xl font-bold">Import Playlist</h1>
           <p className="text-gray-400 text-sm mt-2 max-w-2xl">
-            Connect Spotify or YouTube Music, preview the match results, then import the matched tracks into Youfy.
+            Connect YouTube Music, preview the match results, then import the matched tracks into Youfy.
           </p>
         </div>
         <Link
           to="/library"
-          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-black bg-primary rounded-md"
+          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-black bg-[#FCFFF9] rounded-md"
         >
           Open Library
         </Link>
@@ -335,28 +335,39 @@ export default function ImportPlaylist() {
                 {sources.map(source => {
                   const active = source.id === selectedSource;
                   const isConfigured = Boolean(source.configured);
+                  const isSpotify = source.id === 'spotify';
+                  const isComingSoon = isSpotify && !source.connected;
                   return (
                     <button
                       key={source.id}
                       type="button"
                       onClick={() => {
+                        if (isComingSoon) return;
                         setSelectedSource(source.id);
                         setNotice('');
                         setError('');
                       }}
-                      className={`text-left border rounded-lg px-4 py-4 transition-colors ${
-                        active ? 'border-primary bg-black/30' : 'border-subtle hover:border-white/20'
+                        className={`text-left border rounded-lg px-4 py-4 transition-colors ${
+                          isComingSoon
+                            ? 'border-subtle opacity-50 cursor-not-allowed'
+                          : active ? 'border-[#FCFFF9] bg-black/30' : 'border-subtle hover:border-white/20'
                       }`}
+                      disabled={isComingSoon}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-white font-semibold">{source.label}</p>
+                          <p className={`font-semibold ${isComingSoon ? 'text-gray-400' : 'text-white'}`}>{source.label}</p>
                           <p className="text-xs text-gray-500 mt-1">
-                            {source.connected ? 'Connected' : (isConfigured ? 'Needs authorization' : 'Setup required')}
+                            {isComingSoon ? 'Coming Soon' : (source.connected ? 'Connected' : (isConfigured ? 'Needs authorization' : 'Setup required'))}
                           </p>
                         </div>
-                        <span className={`text-xs font-semibold ${source.connected ? 'text-primary' : (isConfigured ? 'text-amber-400' : 'text-gray-400')}`}>
-                          {source.connected ? 'Ready' : (isConfigured ? 'Connect' : 'Configure')}
+                        <span className={`text-xs font-semibold ${
+                          isComingSoon ? 'text-gray-500'
+                          : source.connected ? 'text-[#FCFFF9]'
+                          : isConfigured ? 'text-amber-400'
+                          : 'text-gray-400'
+                        }`}>
+                          {isComingSoon ? 'Coming Soon' : (source.connected ? 'Ready' : (isConfigured ? 'Connect' : 'Configure'))}
                         </span>
                       </div>
                     </button>
@@ -366,19 +377,27 @@ export default function ImportPlaylist() {
 
               {selectedSourceState && !selectedSourceState.connected && (
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-gray-400">
-                    {selectedSourceState.configured
-                      ? `Authorize ${selectedSourceState.label} to read your private playlists.`
-                      : `${selectedSourceState.label} credentials are missing on backend. Add provider keys to enable secure OAuth.`}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleConnect(selectedSourceState.id)}
-                    disabled={startingOAuth || !selectedSourceState.configured}
-                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-black bg-primary rounded-md disabled:opacity-60"
-                  >
-                    {startingOAuth ? 'Opening provider...' : (selectedSourceState.configured ? `Connect ${selectedSourceState.label}` : 'Setup Required')}
-                  </button>
+                  {selectedSourceState.id === 'spotify' ? (
+                    <p className="text-sm text-gray-400">
+                      Spotify integration is coming soon. Stay tuned for updates!
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-400">
+                        {selectedSourceState.configured
+                          ? `Authorize ${selectedSourceState.label} to read your private playlists.`
+                          : `${selectedSourceState.label} credentials are missing on backend. Add provider keys to enable secure OAuth.`}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleConnect(selectedSourceState.id)}
+                        disabled={startingOAuth || !selectedSourceState.configured}
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-black bg-[#FCFFF9] rounded-md disabled:opacity-60"
+                      >
+                        {startingOAuth ? 'Opening provider...' : (selectedSourceState.configured ? `Connect ${selectedSourceState.label}` : 'Setup Required')}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -414,7 +433,7 @@ export default function ImportPlaylist() {
                         type="button"
                         onClick={() => setActivePlaylistId(playlist.id)}
                         className={`w-full text-left border rounded-lg px-4 py-3 transition-colors ${
-                          activePlaylistId === playlist.id ? 'border-primary bg-black/30' : 'border-subtle hover:border-white/20'
+                          activePlaylistId === playlist.id ? 'border-[#FCFFF9] bg-black/30' : 'border-subtle hover:border-white/20'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-3">
@@ -426,7 +445,7 @@ export default function ImportPlaylist() {
                             </p>
                           </div>
                           {activePlaylistId === playlist.id && (
-                            <span className="text-primary text-xs font-semibold">Selected</span>
+                            <span className="text-[#FCFFF9] text-xs font-semibold">Selected</span>
                           )}
                         </div>
                       </button>
@@ -441,7 +460,7 @@ export default function ImportPlaylist() {
                       type="button"
                       onClick={handlePreview}
                       disabled={!activePlaylistId || previewing}
-                      className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-black bg-primary rounded-md disabled:opacity-60"
+                      className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-black bg-[#FCFFF9] rounded-md disabled:opacity-60"
                     >
                       {previewing ? 'Starting preview...' : 'Preview Matches'}
                     </button>
@@ -455,7 +474,9 @@ export default function ImportPlaylist() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-semibold">3. Review matches</h2>
               {job?.status && (
-                <span className="text-xs text-gray-500 capitalize">{job.status.replace('_', ' ')}</span>
+                <span className={`text-xs capitalize ${job.status === 'processing' || job.status === 'queued' ? 'text-shimmer font-semibold animate-pulse' : 'text-gray-500'}`}>
+                  {job.status.replace('_', ' ')}
+                </span>
               )}
             </div>
 
@@ -469,7 +490,7 @@ export default function ImportPlaylist() {
               <>
                 <div className="mb-5">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-white font-medium">
+                    <span className={`font-medium ${job.status === 'processing' || job.status === 'queued' ? 'text-shimmer animate-pulse' : 'text-white'}`}>
                       {job.status === 'processing' || job.status === 'queued'
                         ? `Matching songs... ${job.progress || 0}%`
                         : (job.playlistTitle || 'Import preview')}
@@ -478,7 +499,7 @@ export default function ImportPlaylist() {
                   </div>
                   <div className="h-2 bg-black rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-primary transition-[width] duration-300"
+                      className="h-full bg-[#FCFFF9] transition-[width] duration-300"
                       style={{ width: `${Math.max(4, job.progress || 0)}%` }}
                     />
                   </div>
@@ -492,7 +513,7 @@ export default function ImportPlaylist() {
                   <>
                     <div className="grid grid-cols-3 gap-3 mb-5">
                       {[
-                        { label: 'Matched', value: previewSummary.matched, tone: 'text-primary' },
+                        { label: 'Matched', value: previewSummary.matched, tone: 'text-[#FCFFF9]' },
                         { label: 'Unmatched', value: previewSummary.unmatched, tone: 'text-amber-400' },
                         { label: 'Accuracy', value: `${previewSummary.accuracy}%`, tone: 'text-white' },
                       ].map(item => (
@@ -534,7 +555,7 @@ export default function ImportPlaylist() {
                         type="button"
                         onClick={handleConfirmImport}
                         disabled={confirming || previewSummary.matched === 0}
-                        className="mt-5 w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-black bg-primary rounded-md disabled:opacity-60"
+                        className="mt-5 w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-black bg-[#FCFFF9] rounded-md disabled:opacity-60"
                       >
                         {confirming ? 'Importing...' : 'Confirm Import'}
                       </button>
@@ -544,7 +565,7 @@ export default function ImportPlaylist() {
                       <button
                         type="button"
                         onClick={() => navigate('/library')}
-                        className="mt-5 w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-black bg-primary rounded-md"
+                        className="mt-5 w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-black bg-[#FCFFF9] rounded-md"
                       >
                         Open Imported Playlist
                       </button>
@@ -554,7 +575,7 @@ export default function ImportPlaylist() {
               </>
             )}
 
-            {notice && <p className="text-sm text-primary mt-5">{notice}</p>}
+            {notice && <p className="text-sm text-[#FCFFF9] mt-5">{notice}</p>}
             {error && <p className="text-sm text-red-400 mt-5">{error}</p>}
           </section>
         </div>

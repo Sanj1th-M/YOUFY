@@ -1,4 +1,5 @@
 const admin = require('../../config/firebase');
+const { SYSTEM_PLAYLISTS, ensureSystemPlaylist } = require('../../services/firestore');
 const { decryptString, encryptString, sha256Base64Url } = require('./crypto');
 
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -43,6 +44,39 @@ function sanitizeMatchedSong(song = {}) {
     durationSeconds: Math.max(0, Math.floor(Number(song.durationSeconds || song.duration) || 0)),
     album: sanitizeText(song.album, 200),
   };
+}
+
+function normalizePlaylistTitle(title) {
+  return sanitizeText(title, 100)
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function shouldImportIntoLikedSongs(title) {
+  const normalized = normalizePlaylistTitle(title);
+  return normalized === 'liked songs'
+    || normalized === 'liked music'
+    || normalized === 'liked videos'
+    || normalized === 'my likes'
+    || /^liked songs ?\d+$/.test(normalized);
+}
+
+function mergeSongsByVideoId(primarySongs = [], secondarySongs = []) {
+  const merged = [];
+  const seen = new Set();
+
+  for (const song of [...primarySongs, ...secondarySongs]) {
+    if (!song?.videoId || seen.has(song.videoId)) {
+      continue;
+    }
+
+    seen.add(song.videoId);
+    merged.push(song);
+  }
+
+  return merged;
 }
 
 function createStorageUnavailableError() {
@@ -315,6 +349,41 @@ async function createImportedPlaylist(uid, job) {
       .sort((a, b) => (Number(a.index) || 0) - (Number(b.index) || 0))
       .map(item => sanitizeMatchedSong(item.youfyTrack));
 
+    if (shouldImportIntoLikedSongs(title)) {
+      const systemPlaylist = await ensureSystemPlaylist(uid, SYSTEM_PLAYLISTS.liked.systemKey);
+      const existingSongs = Array.isArray(systemPlaylist?.songs)
+        ? systemPlaylist.songs.map(sanitizeMatchedSong)
+        : [];
+      const mergedSongs = mergeSongsByVideoId(songs, existingSongs);
+
+      await userRef(uid).collection('playlists').doc(systemPlaylist.id).set({
+        name: SYSTEM_PLAYLISTS.liked.name,
+        songs: mergedSongs,
+        description: SYSTEM_PLAYLISTS.liked.description,
+        privacy: SYSTEM_PLAYLISTS.liked.privacy,
+        voting: SYSTEM_PLAYLISTS.liked.voting,
+        systemKey: SYSTEM_PLAYLISTS.liked.systemKey,
+        updatedAt: timestamp(),
+      }, { merge: true });
+
+      await updateJob(uid, job.id, {
+        status: 'imported',
+        playlistId: systemPlaylist.id,
+        importedAt: timestamp(),
+      });
+
+      return {
+        ...systemPlaylist,
+        id: systemPlaylist.id,
+        name: SYSTEM_PLAYLISTS.liked.name,
+        songs: mergedSongs,
+        description: SYSTEM_PLAYLISTS.liked.description,
+        privacy: SYSTEM_PLAYLISTS.liked.privacy,
+        voting: SYSTEM_PLAYLISTS.liked.voting,
+        systemKey: SYSTEM_PLAYLISTS.liked.systemKey,
+      };
+    }
+
     const ref = userRef(uid).collection('playlists').doc();
     const data = {
       name: title,
@@ -361,9 +430,12 @@ module.exports = {
   getConnectedSources,
   getJob,
   getProviderToken,
+  mergeSongsByVideoId,
+  normalizePlaylistTitle,
   recordAnalytics,
   sanitizeMatchedSong,
   sanitizeSourceTrack,
+  shouldImportIntoLikedSongs,
   storeProviderToken,
   updateJob,
 };

@@ -1,6 +1,11 @@
 const { Router } = require('express');
 const fs = require('../services/firestore');
-const { validatePlaylistNameBody, validateSongBody, sanitizeString } = require('../middleware/validate');
+const {
+  validatePlaylistNameBody,
+  validatePlaylistUpdateBody,
+  validateSongBody,
+  sanitizeString,
+} = require('../middleware/validate');
 const r = Router();
 
 async function assertNotSystemPlaylist(req, res, playlistId) {
@@ -29,7 +34,7 @@ r.post('/', validatePlaylistNameBody, async (req, res) => {
   catch (err) { console.error('[playlist] create:', err.message); res.status(500).json({ error: 'Failed to create playlist.' }); }
 });
 
-r.put('/:id', validatePlaylistNameBody, async (req, res) => {
+r.put('/:id', validatePlaylistUpdateBody, async (req, res) => {
   const id = sanitizeString(req.params.id, 50);
   // Disallow renaming/updating system playlists (e.g., Liked Songs)
   const ok = await assertNotSystemPlaylist(req, res, id);

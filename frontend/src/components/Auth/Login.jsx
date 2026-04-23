@@ -75,7 +75,7 @@ export default function Login() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.svg" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
+          <img src="/logo.svg?v=2" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
           <h1 className="text-white text-2xl font-bold">Youfy</h1>
           <p className="text-gray-400 text-sm mt-1">Log in to your account</p>
         </div>
@@ -133,7 +133,7 @@ export default function Login() {
               placeholder="you@example.com"
               autoComplete="email"
               className="w-full bg-elevated text-white rounded-lg px-4 py-3 text-sm
-                         border border-subtle focus:border-primary outline-none transition-colors"
+                         border border-subtle focus:border-[#FCFFF9] outline-none transition-colors"
             />
           </div>
 
@@ -149,14 +149,14 @@ export default function Login() {
               placeholder="••••••••"
               autoComplete="current-password"
               className="w-full bg-elevated text-white rounded-lg px-4 py-3 text-sm
-                         border border-subtle focus:border-primary outline-none transition-colors"
+                         border border-subtle focus:border-[#FCFFF9] outline-none transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={authDisabled || loading || gLoading}
-            className="w-full bg-primary text-black font-bold py-3 rounded-full
+            className="w-full bg-[#FCFFF9] text-black font-bold py-3 rounded-full
                        hover:scale-105 transition-transform
                        disabled:opacity-50 disabled:scale-100"
           >
@@ -166,7 +166,7 @@ export default function Login() {
 
         <p className="text-center text-gray-400 text-sm mt-6">
           Don't have an account?{' '}
-          <Link to="/register" className="text-primary hover:underline font-medium">
+          <Link to="/register" className="text-[#FCFFF9] hover:underline font-medium">
             Sign up
           </Link>
         </p>
@@ -203,6 +203,7 @@ function friendlyError(code) {
     'auth/too-many-requests':     'Too many attempts. Try again later.',
     'auth/invalid-credential':    'Invalid email or password.',
     'auth/configuration-not-found':'This sign-in method is not enabled in Firebase Authentication.',
+    'auth/unauthorized-domain':   'This device opened the app from a domain or IP that Firebase Authentication does not trust yet.',
     'auth/user-disabled':         'This account has been disabled.',
     'auth/popup-blocked':         'Popup was blocked. Allow popups for this site.',
     'auth/network-request-failed':'Network error. Check your connection.',

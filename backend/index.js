@@ -52,10 +52,37 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
+function isAllowedDevOrigin(origin) {
+  if (!origin || isProd) {
+    return false;
+  }
+
+  try {
+    const { protocol, hostname, port } = new URL(origin);
+    const isHttp = protocol === 'http:';
+    const isVitePort = port === '5173';
+    const isLoopback = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isPrivateLan =
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+
+    return isHttp && isVitePort && (isLoopback || isPrivateLan);
+  } catch {
+    return false;
+  }
+}
+
 app.use(cors({
   origin: (origin, cb) => {
     // Dev convenience: allow any localhost port so Vite can move ports without breaking.
     if (!isProd && origin && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+      return cb(null, true);
+    }
+
+    // Allow Vite running on a private LAN IP so phones/tablets on the same Wi-Fi
+    // can load the frontend and call the backend during development.
+    if (isAllowedDevOrigin(origin)) {
       return cb(null, true);
     }
 

@@ -57,6 +57,55 @@ function validatePlaylistNameBody(req, res, next) {
   next();
 }
 
+function validatePlaylistUpdateBody(req, res, next) {
+  if (!isPlainObject(req.body)) {
+    return res.status(400).json({ error: 'Invalid playlist payload' });
+  }
+
+  const allowedKeys = new Set(['name', 'description', 'privacy', 'voting']);
+  const hasUnknownKeys = Object.keys(req.body).some((key) => !allowedKeys.has(key));
+  if (hasUnknownKeys) {
+    return res.status(400).json({ error: 'Invalid playlist payload' });
+  }
+
+  const updates = {};
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'name')) {
+    const name = sanitizeString(req.body.name, 100);
+    if (!name) {
+      return res.status(400).json({ error: 'Missing: name' });
+    }
+    updates.name = name;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'description')) {
+    updates.description = sanitizeString(req.body.description, 300);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'privacy')) {
+    const privacy = sanitizeString(req.body.privacy, 20).toLowerCase();
+    if (!['private', 'public', 'unlisted'].includes(privacy)) {
+      return res.status(400).json({ error: 'Invalid privacy value' });
+    }
+    updates.privacy = privacy;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'voting')) {
+    const voting = sanitizeString(req.body.voting, 10).toLowerCase();
+    if (!['off', 'on'].includes(voting)) {
+      return res.status(400).json({ error: 'Invalid voting value' });
+    }
+    updates.voting = voting;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Missing playlist updates' });
+  }
+
+  req.body = updates;
+  next();
+}
+
 function validateSongBody(req, res, next) {
   const body = isPlainObject(req.body) ? req.body : {};
 
@@ -78,6 +127,7 @@ module.exports = {
   validateVideoId,
   validateSearchQuery,
   validatePlaylistNameBody,
+  validatePlaylistUpdateBody,
   validateSongBody,
   sanitizeString,
 };

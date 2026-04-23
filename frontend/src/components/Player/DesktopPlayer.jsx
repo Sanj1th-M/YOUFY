@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import usePlayerStore from '../../store/usePlayerStore';
 import ProgressBar from './ProgressBar';
-import usePlaylistStore from '../../store/usePlaylistStore';
 import QueuePanel from './QueuePanel';
+import AnimatedLikeButton from './AnimatedLikeButton';
 
 export default function DesktopPlayer() {
   const currentSong = usePlayerStore(s => s.currentSong);
@@ -14,11 +14,7 @@ export default function DesktopPlayer() {
   const volume      = usePlayerStore(s => s.volume);
   const setVolume   = usePlayerStore(s => s.setVolume);
   const queue       = usePlayerStore(s => s.queue);
-  const isSongLiked = usePlaylistStore(s => s.isSongLiked);
-  const toggleLike  = usePlaylistStore(s => s.toggleLike);
   const [showQueue, setShowQueue] = useState(false);
-
-  const liked = currentSong ? isSongLiked(currentSong.videoId) : false;
 
   useEffect(() => {
     if (!showQueue) return;
@@ -46,7 +42,7 @@ export default function DesktopPlayer() {
       <div
         id="desktop-player"
         className="hidden md:flex fixed bottom-0 left-0 right-0 h-[90px] z-50
-                   bg-elevated border-t border-white/5 px-4 items-center"
+                   bg-black border-t border-white/5 px-4 items-center"
       >
       {/* ── Left: Track Info ── */}
       <div className="flex items-center gap-3 w-[30%] min-w-0">
@@ -60,17 +56,11 @@ export default function DesktopPlayer() {
           <p className="text-white text-sm font-medium truncate">{currentSong.title}</p>
           <p className="text-muted text-xs truncate">{currentSong.artist}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => toggleLike(currentSong)}
-          className={`ml-1 p-2 rounded-full transition-colors
-            ${liked ? 'text-primary' : 'text-gray-400 hover:text-white'}`}
-          aria-label={liked ? 'Unlike' : 'Like'}
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
-          </svg>
-        </button>
+        <AnimatedLikeButton
+          song={currentSong}
+          className="ml-1 p-2 rounded-full"
+          iconClassName="w-5 h-5"
+        />
       </div>
 
       {/* ── Center: Controls + Progress ── */}
@@ -170,9 +160,9 @@ export default function DesktopPlayer() {
           step="0.01"
           value={volume}
           onChange={e => setVolume(parseFloat(e.target.value))}
-          className="w-24 accent-primary"
+          className="w-24 accent-[#FCFFF9]"
           style={{
-            background: `linear-gradient(to right, #1DB954 ${volume * 100}%, #535353 ${volume * 100}%)`,
+            background: `linear-gradient(to right, #FCFFF9 ${volume * 100}%, #535353 ${volume * 100}%)`,
           }}
           aria-label="Volume"
         />

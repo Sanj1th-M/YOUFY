@@ -72,6 +72,7 @@ export const syncRecentlyPlayed = (song) => {
 // Playlists (JWT protected)
 export const getPlaylists          = ()                    => api.get('/playlist').then(r => r.data.playlists);
 export const createPlaylist        = (name)                => api.post('/playlist', { name }).then(r => r.data);
+export const updatePlaylist        = (id, updates)         => api.put(`/playlist/${id}`, updates).then(r => r.data);
 export const deletePlaylist        = (id)                  => api.delete(`/playlist/${id}`).then(r => r.data);
 export const addSongToPlaylist     = (playlistId, song)    => api.post(`/playlist/${playlistId}/song`, song).then(r => r.data);
 export const removeSongFromPlaylist= (playlistId, videoId) => api.delete(`/playlist/${playlistId}/song/${videoId}`).then(r => r.data);

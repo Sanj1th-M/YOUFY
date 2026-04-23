@@ -42,8 +42,7 @@ export function TrendingSection({ sections }) {
           <button
             key={song.videoId || i}
             onClick={() => playSong(song, songs.slice(i + 1))}
-            className="bg-card hover:bg-subtle rounded-lg p-3 md:p-4 text-left
-                       transition-all duration-300 group cursor-pointer"
+            className="liquid-glass-card rounded-lg p-3 md:p-4 text-left transition-all duration-300 group cursor-pointer"
           >
             {/* Album Art with hover play button */}
             <div className="relative mb-3">
@@ -53,8 +52,8 @@ export function TrendingSection({ sections }) {
                 className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
                 onError={e => { e.target.src = '/logo-dark.png'; }}
               />
-              {/* Green play button — desktop hover only */}
-              <div className="absolute bottom-2 right-2 w-10 h-10 bg-primary rounded-full
+              {/* Bluish-white play button — desktop hover only */}
+              <div className="absolute bottom-2 right-2 w-10 h-10 bg-[#FCFFF9] rounded-full
                               flex items-center justify-center shadow-xl shadow-black/50
                               opacity-0 translate-y-2
                               group-hover:opacity-100 group-hover:translate-y-0
@@ -97,9 +96,8 @@ export function RecentlyPlayed() {
             <button
               key={song.videoId || i}
               onClick={() => playSong(song, recent.slice(i + 1))}
-              className={`flex items-center gap-3 rounded-md overflow-hidden
-                         bg-white/5 hover:bg-white/10 transition-colors group h-14 md:h-16
-                         ${isActive ? 'ring-1 ring-primary/40' : ''}`}
+              className={`liquid-glass-card flex items-center gap-3 rounded-md overflow-hidden group h-14 md:h-16
+                         ${isActive ? 'liquid-glass-card-active' : ''}`}
             >
               {/* Image */}
               <img
@@ -112,7 +110,9 @@ export function RecentlyPlayed() {
               {/* Title */}
               <div className="flex-1 min-w-0 pr-3">
                 <p className={`text-sm font-semibold truncate
-                  ${isActive ? 'text-primary' : 'text-white'}`}>
+                  ${isActive && isPlaying ? 'playing-title-shimmer' : isActive ? 'text-[#dbeafe]' : 'text-white'}`}
+                  data-text={song.title}
+                >
                   {song.title}
                 </p>
               </div>
@@ -123,7 +123,7 @@ export function RecentlyPlayed() {
                   {[0, 1, 2].map(j => (
                     <div
                       key={j}
-                      className="w-0.5 bg-primary rounded-full animate-bounce"
+                      className="w-0.5 bg-[#FCFFF9] rounded-full animate-bounce"
                       style={{
                         height: `${(j + 1) * 4 + 2}px`,
                         animationDelay: `${j * 0.15}s`,

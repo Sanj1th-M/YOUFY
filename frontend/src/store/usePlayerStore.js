@@ -87,6 +87,25 @@ function prefetchNext(queue) {
   });
 }
 
+function normalizeQueueSongs(songs = []) {
+  const seen = new Set();
+  return songs.filter((song) => {
+    const id = song?.videoId;
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+function mergeQueues(manualQueue = [], autoQueue = []) {
+  return normalizeQueueSongs([...(manualQueue || []), ...(autoQueue || [])]);
+}
+
+function removeSongFromQueue(queue = [], videoId) {
+  if (!videoId) return Array.isArray(queue) ? queue : [];
+  return (Array.isArray(queue) ? queue : []).filter((song) => song?.videoId !== videoId);
+}
+
 const usePlayerStore = create((set, get) => ({
   currentSong:    null,
   isPlaying:      false,
@@ -94,13 +113,16 @@ const usePlayerStore = create((set, get) => ({
   currentTime:    0,
   duration:       0,
   volume:         parseFloat(localStorage.getItem('volume') ?? '1'),
+  manualQueue:    [],
+  autoQueue:      [],
   queue:          [],
   history:        [],
   showFullPlayer: false,
   error:          null,
 
-  playSong: async (song, queueList = []) => {
+  playSong: async (song, queueList = [], options = {}) => {
     if (!song?.videoId) return;
+    const { preserveQueues = false, queueSource = 'auto' } = options;
 
     // ── Increment request ID to invalidate any in-flight requests ──
     const thisRequestId = ++playRequestId;
@@ -110,7 +132,23 @@ const usePlayerStore = create((set, get) => ({
     const isReplay = prevSong && song && prevSong.videoId === song.videoId;
 
     // Show loading state immediately with the new song info
-    set({ isLoading: true, error: null, currentSong: song, queue: queueList });
+    if (preserveQueues) {
+      set({ isLoading: true, error: null, currentSong: song });
+    } else {
+      const nextList = normalizeQueueSongs(queueList);
+      const { manualQueue, autoQueue } = get();
+      const nextManualQueue = queueSource === 'manual' ? nextList : manualQueue;
+      const nextAutoQueue = queueSource === 'manual' ? autoQueue : nextList;
+      const nextQueue = mergeQueues(nextManualQueue, nextAutoQueue);
+      set({
+        isLoading: true,
+        error: null,
+        currentSong: song,
+        manualQueue: nextManualQueue,
+        autoQueue: nextAutoQueue,
+        queue: nextQueue,
+      });
+    }
 
     try {
       // Get URL from cache or backend
@@ -143,7 +181,7 @@ const usePlayerStore = create((set, get) => ({
       set({ isPlaying: true, isLoading: false });
 
       // Pre-fetch next song URL in background — zero wait when song ends
-      warmQueueSongs(queueList);
+      warmQueueSongs(get().queue);
 
       // ── Track REPLAY event ──
       if (isReplay) {
@@ -226,28 +264,51 @@ const usePlayerStore = create((set, get) => ({
     set({ volume: v });
   },
 
-  setQueue: (q) => set({ queue: q }),
+  setQueue: (q) => set(() => {
+    const nextManualQueue = normalizeQueueSongs(q);
+    const nextAutoQueue = [];
+    const nextQueue = mergeQueues(nextManualQueue, nextAutoQueue);
+    warmQueueSongs(nextQueue);
+    return {
+      manualQueue: nextManualQueue,
+      autoQueue: nextAutoQueue,
+      queue: nextQueue,
+    };
+  }),
 
   addToQueue: (song) => {
     if (!song?.videoId) return;
     set((s) => {
-      const without = s.queue.filter((x) => x?.videoId !== song.videoId);
-      const nextQueue = [...without, song];
+      const withoutManual = removeSongFromQueue(s.manualQueue, song.videoId);
+      const withoutAuto = removeSongFromQueue(s.autoQueue, song.videoId);
+      const nextManualQueue = [song, ...withoutManual];
+      const nextAutoQueue = withoutAuto;
+      const nextQueue = mergeQueues(nextManualQueue, nextAutoQueue);
       warmQueueSongs(nextQueue);
-      return { queue: nextQueue };
+      return {
+        manualQueue: nextManualQueue,
+        autoQueue: nextAutoQueue,
+        queue: nextQueue,
+      };
     });
   },
 
   removeFromQueue: (videoId) => {
     if (!videoId) return;
     set((s) => {
-      const nextQueue = s.queue.filter((x) => x?.videoId !== videoId);
+      const nextManualQueue = removeSongFromQueue(s.manualQueue, videoId);
+      const nextAutoQueue = removeSongFromQueue(s.autoQueue, videoId);
+      const nextQueue = mergeQueues(nextManualQueue, nextAutoQueue);
       warmQueueSongs(nextQueue);
-      return { queue: nextQueue };
+      return {
+        manualQueue: nextManualQueue,
+        autoQueue: nextAutoQueue,
+        queue: nextQueue,
+      };
     });
   },
 
-  clearQueue: () => set({ queue: [] }),
+  clearQueue: () => set({ manualQueue: [], autoQueue: [], queue: [] }),
 
   moveQueueItem: (fromIndex, toIndex) => {
     set((s) => {
@@ -257,7 +318,7 @@ const usePlayerStore = create((set, get) => ({
       const [item] = q.splice(fromIndex, 1);
       q.splice(toIndex, 0, item);
       warmQueueSongs(q);
-      return { queue: q };
+      return { manualQueue: q, autoQueue: [], queue: q };
     });
   },
 
@@ -271,16 +332,18 @@ const usePlayerStore = create((set, get) => ({
   },
 
   playFromQueueIndex: (index) => {
-    const { queue, playSong } = get();
+    const { queue, manualQueue, autoQueue, playSong } = get();
     if (!Array.isArray(queue) || index < 0 || index >= queue.length) return;
     const next = queue[index];
-    const rest = [...queue.slice(0, index), ...queue.slice(index + 1)];
-    set({ queue: rest });
-    playSong(next, rest);
+    const nextManualQueue = removeSongFromQueue(manualQueue, next?.videoId);
+    const nextAutoQueue = removeSongFromQueue(autoQueue, next?.videoId);
+    const rest = mergeQueues(nextManualQueue, nextAutoQueue);
+    set({ manualQueue: nextManualQueue, autoQueue: nextAutoQueue, queue: rest });
+    playSong(next, rest, { preserveQueues: true });
   },
 
   playNext: () => {
-    const { queue, currentSong, history, playSong, currentTime } = get();
+    const { manualQueue, autoQueue, currentSong, playSong, currentTime } = get();
 
     // ── Track SKIPPED (skipped before 30 seconds) ──
     if (currentSong && currentTime < 30) {
@@ -291,10 +354,34 @@ const usePlayerStore = create((set, get) => ({
     }
 
     if (currentSong) set(s => ({ history: [currentSong, ...s.history].slice(0, 50) }));
-    if (queue.length > 0) {
-      const [next, ...rest] = queue;
-      set({ queue: rest });
-      playSong(next, rest);
+
+    const hasManualQueue = Array.isArray(manualQueue) && manualQueue.length > 0;
+    const hasAutoQueue = Array.isArray(autoQueue) && autoQueue.length > 0;
+    if (!hasManualQueue && !hasAutoQueue) return;
+
+    let nextTrack = null;
+    let nextManualQueue = manualQueue;
+    let nextAutoQueue = autoQueue;
+
+    if (hasManualQueue) {
+      nextTrack = manualQueue[0];
+      const expectedManualTop = manualQueue[0];
+      if (nextTrack?.videoId !== expectedManualTop?.videoId) {
+        console.error(
+          '[queue] invariant violated: nextTrack must match manualQueue[0] when manual queue is non-empty',
+          { nextTrackId: nextTrack?.videoId, expectedId: expectedManualTop?.videoId }
+        );
+      }
+      nextManualQueue = manualQueue.slice(1);
+    } else {
+      nextTrack = autoQueue[0];
+      nextAutoQueue = autoQueue.slice(1);
+    }
+
+    const rest = mergeQueues(nextManualQueue, nextAutoQueue);
+    set({ manualQueue: nextManualQueue, autoQueue: nextAutoQueue, queue: rest });
+    if (nextTrack) {
+      playSong(nextTrack, rest, { preserveQueues: true });
     }
   },
 
@@ -303,7 +390,7 @@ const usePlayerStore = create((set, get) => ({
     if (history.length > 0) {
       const [prev, ...rest] = history;
       set({ history: rest });
-      playSong(prev);
+      playSong(prev, [], { preserveQueues: true });
     }
   },
 
