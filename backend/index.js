@@ -148,4 +148,4 @@ if (firebaseConfigured && isPlaylistImportEnabled()) {
   startPlaylistImportWorker();
 }
 
-app.listen(PORT, () => console.log(`Youtfly backend running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Youfy backend running on port ${PORT}`));
