@@ -44,6 +44,8 @@ app.use(helmet({
     },
   },
   hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  // Prevent OAuth callback URLs (with codes/state) from leaking via Referer header
+  referrerPolicy: { policy: 'no-referrer' },
 }));
 
 const allowedOrigins = [
@@ -92,7 +94,8 @@ app.use(cors({
 
     cb(new Error('Not allowed by CORS'));
   },
-  credentials: true,
+  // No credentials:true — app uses Authorization headers, not cookies.
+  // This prevents browsers from sending cookies cross-origin, reducing attack surface.
 }));
 
 // Reject oversized URLs to prevent memory-based DoS

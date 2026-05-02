@@ -56,7 +56,7 @@ r.post('/verify', async (req, res) => {
  */
 r.post('/logout', async (req, res) => {
   const { idToken } = req.body;
-  if (!idToken || typeof idToken !== 'string') {
+  if (!idToken || typeof idToken !== 'string' || idToken.length > 4096) {
     return res.status(400).json({ error: 'Invalid request' });
   }
 
