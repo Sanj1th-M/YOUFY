@@ -10,13 +10,18 @@ import AnimatedLikeButton from './AnimatedLikeButton';
 function getBestThumbnail(url) {
   if (!url) return '/logo-dark.png';
   // If it's a YouTube thumbnail URL, upgrade to maxresdefault
-  if (url.includes('ytimg.com') || url.includes('youtube.com')) {
+  if (
+    url.includes('ytimg.com') ||
+    url.includes('youtube.com') ||
+    url.includes('googleusercontent.com') ||
+    url.includes('ggpht.com')
+  ) {
     return url
       .replace(/\/default\.jpg/, '/maxresdefault.jpg')
       .replace(/\/mqdefault\.jpg/, '/maxresdefault.jpg')
       .replace(/\/hqdefault\.jpg/, '/maxresdefault.jpg')
       .replace(/\/sddefault\.jpg/, '/maxresdefault.jpg')
-      .replace(/=w\d+-h\d+/, '=w1280-h1280')  // YouTube Music format
+      .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')  // YouTube Music format
       .replace(/=s\d+/, '=s1280');              // Google APIs format
   }
   return url;

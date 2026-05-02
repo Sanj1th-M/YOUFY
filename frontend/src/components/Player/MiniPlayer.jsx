@@ -24,7 +24,7 @@ export default function MiniPlayer() {
       {/* Thin progress line at top of mini player */}
       <div className="w-full h-[2px] bg-white/10">
         <div
-          className="h-full bg-primary transition-all duration-300 ease-linear"
+          className="h-full bg-white transition-all duration-300 ease-linear"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -60,7 +60,12 @@ export default function MiniPlayer() {
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isLoading ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="youfy-eq scale-[0.4]" aria-hidden="true">
+              <span className="youfy-eq-bar bg-white" />
+              <span className="youfy-eq-bar bg-white" />
+              <span className="youfy-eq-bar bg-white" />
+              <span className="youfy-eq-bar bg-white" />
+            </div>
           ) : isPlaying ? (
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>

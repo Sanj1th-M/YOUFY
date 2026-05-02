@@ -27,7 +27,12 @@ export default function PlayerControls({ size = 'md' }) {
                     hover:scale-105 transition-transform flex-shrink-0`}
       >
         {isLoading ? (
-          <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+          <div className="youfy-eq scale-50" aria-hidden="true">
+            <span className="youfy-eq-bar bg-black" />
+            <span className="youfy-eq-bar bg-black" />
+            <span className="youfy-eq-bar bg-black" />
+            <span className="youfy-eq-bar bg-black" />
+          </div>
         ) : isPlaying ? (
           <svg className={iconSz} fill="black" viewBox="0 0 24 24">
             <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>

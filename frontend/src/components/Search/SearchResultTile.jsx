@@ -321,8 +321,12 @@ export default function SearchResultTile({ results }) {
                     {isLoading && (
                       <div className="absolute inset-0 rounded-full bg-black/50
                                       flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-white/60
-                                        border-t-transparent rounded-full animate-spin" />
+                        <div className="youfy-eq scale-50" aria-hidden="true">
+                          <span className="youfy-eq-bar bg-white/60" />
+                          <span className="youfy-eq-bar bg-white/60" />
+                          <span className="youfy-eq-bar bg-white/60" />
+                          <span className="youfy-eq-bar bg-white/60" />
+                        </div>
                       </div>
                     )}
                   </div>

@@ -31,7 +31,7 @@ export default function ProgressBar({ compact = false }) {
         onClick={handleClick}
         onTouchStart={handleTouch}
       >
-        <div className="h-full bg-gray-500 group-hover:bg-primary rounded-full transition-colors relative"
+        <div className="h-full bg-gray-500 group-hover:bg-white rounded-full transition-colors relative"
           style={{ width: `${pct}%` }}>
           <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full
                           opacity-0 group-hover:opacity-100 transition-opacity shadow" />

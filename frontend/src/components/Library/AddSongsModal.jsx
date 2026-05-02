@@ -18,12 +18,12 @@ function getBestThumbnail(thumbnails, fallback = '') {
 
 function normalizeSong(s) {
   return {
-    videoId:         s.videoId,
-    title:           s.name || s.title || 'Unknown',
-    artist:          s.artist?.name || s.artists?.[0]?.name || 'Unknown',
-    thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
+    videoId: s.videoId,
+    title: s.name || s.title || 'Unknown',
+    artist: s.artist?.name || s.artists?.[0]?.name || 'Unknown',
+    thumbnail: getBestThumbnail(s.thumbnails) || s.thumbnail || '',
     durationSeconds: s.duration || 0,
-    album:           s.album?.name || '',
+    album: s.album?.name || '',
   };
 }
 
@@ -105,18 +105,16 @@ export default function AddSongsModal({ playlist, onClose }) {
         type="button"
         aria-label="Close"
         onClick={closeModal}
-        className={`absolute inset-0 transition-opacity duration-200 ${
-          isOpen ? 'bg-black/70 opacity-100' : 'bg-black/0 opacity-0'
-        }`}
+        className={`absolute inset-0 transition-opacity duration-200 ${isOpen ? 'bg-black/70 opacity-100' : 'bg-black/0 opacity-0'
+          }`}
       />
 
       <div className={`absolute left-1/2 top-1/2 w-[94vw] max-w-xl -translate-x-1/2 -translate-y-1/2
                       bg-elevated border border-white/10 rounded-2xl overflow-hidden shadow-2xl
-                      transition-all duration-200 ease-out ${
-                        isOpen
-                          ? 'opacity-100 scale-100 translate-y-[-50%]'
-                          : 'opacity-0 scale-95 translate-y-[calc(-50%+10px)]'
-                      }`}>
+                      transition-all duration-200 ease-out ${isOpen
+          ? 'opacity-100 scale-100 translate-y-[-50%]'
+          : 'opacity-0 scale-95 translate-y-[calc(-50%+10px)]'
+        }`}>
         <div className="p-4 border-b border-white/5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-subtle">
@@ -127,13 +125,13 @@ export default function AddSongsModal({ playlist, onClose }) {
                 loading="lazy"
                 referrerPolicy="no-referrer"
                 crossOrigin="anonymous"
-                onError={e => { e.target.src = '/logo-dark.png'; }}
+                onError={e => { e.target.src = '/logo.svg'; }}
               />
             </div>
 
             <div className="min-w-0">
-            <p className="text-white font-bold truncate">Add songs</p>
-            <p className="text-gray-400 text-xs truncate">{playlist.name}</p>
+              <p className="text-white font-bold truncate">add songs</p>
+              <p className="text-gray-400 text-xs truncate">{playlist.name}</p>
             </div>
           </div>
           <button
@@ -143,7 +141,7 @@ export default function AddSongsModal({ playlist, onClose }) {
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>
           </button>
         </div>
@@ -152,7 +150,7 @@ export default function AddSongsModal({ playlist, onClose }) {
           <div className="group relative overflow-hidden rounded-full border border-white/20 bg-white/[0.06] transition-all duration-200 hover:border-white/35 hover:bg-white/[0.1] focus-within:border-white focus-within:bg-white/[0.12] focus-within:shadow-[0_0_0_1px_rgba(255,255,255,0.95)]">
             <svg className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/65 transition-colors duration-200 group-hover:text-white/90 group-focus-within:text-white"
               fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
             </svg>
             <input
               value={query}
@@ -166,7 +164,7 @@ export default function AddSongsModal({ playlist, onClose }) {
           <div className="mt-4 max-h-[55vh] overflow-y-auto no-scrollbar">
             {!query.trim() && (
               <div className="py-10 text-center text-gray-500 text-sm">
-                Search for a song, then tap <span className="text-white">Add</span>.
+                Search for a song, then tap <span className="text-white">add</span>.
               </div>
             )}
 
@@ -227,11 +225,11 @@ export default function AddSongsModal({ playlist, onClose }) {
                           <span className="w-7 h-7 rounded-full bg-black/45 flex items-center justify-center">
                             {rowIsPlaying ? (
                               <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                               </svg>
                             ) : (
                               <svg className="w-3.5 h-3.5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
+                                <path d="M8 5v14l11-7z" />
                               </svg>
                             )}
                           </span>

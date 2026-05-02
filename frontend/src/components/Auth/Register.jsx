@@ -105,8 +105,12 @@ export default function Register() {
                      transition-colors disabled:opacity-50"
         >
           {gLoading ? (
-            <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent
-                            rounded-full animate-spin" />
+            <div className="youfy-eq scale-50" aria-hidden="true">
+              <span className="youfy-eq-bar bg-gray-400" />
+              <span className="youfy-eq-bar bg-gray-400" />
+              <span className="youfy-eq-bar bg-gray-400" />
+              <span className="youfy-eq-bar bg-gray-400" />
+            </div>
           ) : (
             <GoogleIcon />
           )}

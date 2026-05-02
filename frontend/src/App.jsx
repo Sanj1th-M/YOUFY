@@ -33,10 +33,10 @@ export default function App() {
     return (
       <div className="youfy-loader-screen">
         <div className="youfy-eq" aria-hidden="true">
-          <span className="youfy-eq-bar" />
-          <span className="youfy-eq-bar" />
-          <span className="youfy-eq-bar" />
-          <span className="youfy-eq-bar" />
+          <span className="youfy-eq-bar bg-white" />
+          <span className="youfy-eq-bar bg-white" />
+          <span className="youfy-eq-bar bg-white" />
+          <span className="youfy-eq-bar bg-white" />
         </div>
 
         <p className="youfy-loader-copy" role="status" aria-live="polite">
