@@ -13,6 +13,24 @@ import usePlaylistStore from '../store/usePlaylistStore';
 
 const OAUTH_EVENT = 'youfy.playlistImport.oauth';
 
+// Security: Never render raw URL `reason` params in the UI.
+// Attacker-crafted URLs like ?oauth=error&reason=Your+account+compromised+visit+evil.com
+// would display as a trusted error message. Whitelist known codes instead.
+const OAUTH_ERROR_MESSAGES = {
+  authorization_failed: 'Authorization was denied or cancelled.',
+  access_denied: 'Access was denied by the provider.',
+  invalid_scope: 'The requested permissions were not granted.',
+  server_error: 'The provider returned an error. Please try again.',
+  temporarily_unavailable: 'The provider is temporarily unavailable. Please try again later.',
+  expired: 'The authorization session expired. Please try again.',
+  missing_code_or_state: 'Authorization response was incomplete. Please try again.',
+};
+
+function sanitizeOAuthReason(reason) {
+  if (!reason || typeof reason !== 'string') return 'Connection failed. Please try again.';
+  return OAUTH_ERROR_MESSAGES[reason.trim().toLowerCase()] || 'Connection failed. Please try again.';
+}
+
 function formatDuration(seconds) {
   const total = Math.max(0, Number(seconds) || 0);
   if (!total) return '--';
@@ -160,7 +178,7 @@ export default function ImportPlaylist() {
       setNotice(`${source === 'youtube' ? 'YouTube Music' : 'Spotify'} connected.`);
       loadSources();
     } else {
-      setError(reason || 'Connection failed.');
+      setError(sanitizeOAuthReason(reason));
     }
 
     const nextParams = new URLSearchParams(searchParams);
@@ -180,7 +198,7 @@ export default function ImportPlaylist() {
         setError('');
         loadSources();
       } else {
-        setError(event.data.reason || 'Connection failed.');
+        setError(sanitizeOAuthReason(event.data.reason));
       }
     }
 

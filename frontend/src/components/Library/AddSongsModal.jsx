@@ -130,7 +130,7 @@ export default function AddSongsModal({ playlist, onClose }) {
             </div>
 
             <div className="min-w-0">
-              <p className="text-white font-bold truncate">add songs</p>
+              <p className="text-white font-bold truncate">Add songs</p>
               <p className="text-gray-400 text-xs truncate">{playlist.name}</p>
             </div>
           </div>
@@ -164,7 +164,7 @@ export default function AddSongsModal({ playlist, onClose }) {
           <div className="mt-4 max-h-[55vh] overflow-y-auto no-scrollbar">
             {!query.trim() && (
               <div className="py-10 text-center text-gray-500 text-sm">
-                Search for a song, then tap <span className="text-white">add</span>.
+                Search for a song, then tap add
               </div>
             )}
 

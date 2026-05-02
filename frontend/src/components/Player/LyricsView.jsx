@@ -20,10 +20,10 @@ export default function LyricsView() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="youfy-eq scale-75" aria-hidden="true">
-          <span className="youfy-eq-bar bg-primary" />
-          <span className="youfy-eq-bar bg-primary" />
-          <span className="youfy-eq-bar bg-primary" />
-          <span className="youfy-eq-bar bg-primary" />
+          <span className="youfy-eq-bar bg-[#FCFFF9]" />
+          <span className="youfy-eq-bar bg-[#FCFFF9]" />
+          <span className="youfy-eq-bar bg-[#FCFFF9]" />
+          <span className="youfy-eq-bar bg-[#FCFFF9]" />
         </div>
       </div>
     );

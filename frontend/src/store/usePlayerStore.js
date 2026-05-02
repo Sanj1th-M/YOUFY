@@ -106,6 +106,18 @@ function removeSongFromQueue(queue = [], videoId) {
   return (Array.isArray(queue) ? queue : []).filter((song) => song?.videoId !== videoId);
 }
 
+function pickRandomQueueEntry(queue = []) {
+  if (!Array.isArray(queue) || queue.length === 0) {
+    return { nextTrack: null, remainingQueue: [] };
+  }
+
+  const randomIndex = Math.floor(Math.random() * queue.length);
+  const nextTrack = queue[randomIndex] || null;
+  const remainingQueue = queue.filter((_, index) => index !== randomIndex);
+
+  return { nextTrack, remainingQueue };
+}
+
 const usePlayerStore = create((set, get) => ({
   currentSong:    null,
   isPlaying:      false,
@@ -113,6 +125,8 @@ const usePlayerStore = create((set, get) => ({
   currentTime:    0,
   duration:       0,
   volume:         parseFloat(localStorage.getItem('volume') ?? '1'),
+  shuffleEnabled: false,
+  repeatMode:     'off',
   manualQueue:    [],
   autoQueue:      [],
   queue:          [],
@@ -207,6 +221,16 @@ const usePlayerStore = create((set, get) => ({
             updateSongScore(recUserId, endedSong.videoId, toSongMeta(endedSong), 'FULL_LISTEN');
           }
         }
+        if (get().repeatMode === 'one' && endedSong) {
+          audioPlayer.seek(0);
+          set({ currentTime: 0 });
+          audioPlayer.resume()
+            .then(() => set({ isPlaying: true, isLoading: false, error: null }))
+            .catch(() => {
+              get().playSong(endedSong, get().queue, { preserveQueues: true });
+            });
+          return;
+        }
         set({ isPlaying: false });
         get().playNext();
       });
@@ -263,6 +287,17 @@ const usePlayerStore = create((set, get) => ({
     localStorage.setItem('volume', String(v));
     set({ volume: v });
   },
+
+  toggleShuffle: () => set((state) => ({ shuffleEnabled: !state.shuffleEnabled })),
+
+  cycleRepeatMode: () => set((state) => ({
+    repeatMode:
+      state.repeatMode === 'off'
+        ? 'all'
+        : state.repeatMode === 'all'
+          ? 'one'
+          : 'off',
+  })),
 
   setQueue: (q) => set(() => {
     const nextManualQueue = normalizeQueueSongs(q);
@@ -343,7 +378,7 @@ const usePlayerStore = create((set, get) => ({
   },
 
   playNext: () => {
-    const { manualQueue, autoQueue, currentSong, playSong, currentTime } = get();
+    const { manualQueue, autoQueue, currentSong, playSong, currentTime, repeatMode, shuffleEnabled } = get();
 
     // ── Track SKIPPED (skipped before 30 seconds) ──
     if (currentSong && currentTime < 30) {
@@ -357,13 +392,26 @@ const usePlayerStore = create((set, get) => ({
 
     const hasManualQueue = Array.isArray(manualQueue) && manualQueue.length > 0;
     const hasAutoQueue = Array.isArray(autoQueue) && autoQueue.length > 0;
-    if (!hasManualQueue && !hasAutoQueue) return;
+    if (!hasManualQueue && !hasAutoQueue) {
+      if (repeatMode === 'all' && currentSong) {
+        playSong(currentSong, [], { preserveQueues: true });
+      }
+      return;
+    }
 
     let nextTrack = null;
     let nextManualQueue = manualQueue;
     let nextAutoQueue = autoQueue;
 
-    if (hasManualQueue) {
+    if (hasManualQueue && shuffleEnabled) {
+      const randomPick = pickRandomQueueEntry(manualQueue);
+      nextTrack = randomPick.nextTrack;
+      nextManualQueue = randomPick.remainingQueue;
+    } else if (hasAutoQueue && shuffleEnabled) {
+      const randomPick = pickRandomQueueEntry(autoQueue);
+      nextTrack = randomPick.nextTrack;
+      nextAutoQueue = randomPick.remainingQueue;
+    } else if (hasManualQueue) {
       nextTrack = manualQueue[0];
       const expectedManualTop = manualQueue[0];
       if (nextTrack?.videoId !== expectedManualTop?.videoId) {
@@ -386,7 +434,12 @@ const usePlayerStore = create((set, get) => ({
   },
 
   playPrev: () => {
-    const { history, playSong } = get();
+    const { history, playSong, currentSong, currentTime } = get();
+    if (currentSong && currentTime > 3) {
+      audioPlayer.seek(0);
+      set({ currentTime: 0 });
+      return;
+    }
     if (history.length > 0) {
       const [prev, ...rest] = history;
       set({ history: rest });
