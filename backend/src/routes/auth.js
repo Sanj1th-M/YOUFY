@@ -61,7 +61,7 @@ r.post('/logout', async (req, res) => {
   }
 
   try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    const decoded = await admin.auth().verifyIdToken(idToken, true); // checkRevoked=true
     // Revoke all refresh tokens — server-side logout
     await admin.auth().revokeRefreshTokens(decoded.uid);
     res.json({ success: true });
