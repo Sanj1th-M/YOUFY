@@ -16,10 +16,10 @@
   },
   "lint-staged": {
     "backend/**/*.{js,cjs,mjs}": [
-      "npm --prefix backend exec -- eslint"
+      "npm --prefix backend run -s lint"
     ],
     "frontend/**/*.{js,jsx,cjs,mjs}": [
-      "npm --prefix frontend exec -- eslint"
+      "npm --prefix frontend run -s lint"
     ]
   }
 }
