@@ -58,11 +58,25 @@ function sanitizeBackendMessage(error, fallback) {
   return message;
 }
 
+// Security: Only pass known reason codes in redirect URLs — never raw error strings.
+// The frontend also whitelists these codes, so this is defense-in-depth.
+const KNOWN_REASON_CODES = new Set([
+  'authorization_failed', 'access_denied', 'invalid_scope',
+  'server_error', 'temporarily_unavailable', 'expired',
+  'missing_code_or_state',
+]);
+
+function toSafeReasonCode(rawReason) {
+  if (!rawReason || typeof rawReason !== 'string') return 'authorization_failed';
+  const normalized = rawReason.trim().toLowerCase().replace(/\s+/g, '_');
+  return KNOWN_REASON_CODES.has(normalized) ? normalized : 'authorization_failed';
+}
+
 function toFrontendRedirect(source, oauthStatus, reason) {
   const url = new URL('/import-playlist', `${getFrontendUrl()}/`);
   if (source) url.searchParams.set('source', source);
   if (oauthStatus) url.searchParams.set('oauth', oauthStatus);
-  if (reason) url.searchParams.set('reason', sanitizeText(reason, 120));
+  if (reason) url.searchParams.set('reason', toSafeReasonCode(reason));
   return url.toString();
 }
 
