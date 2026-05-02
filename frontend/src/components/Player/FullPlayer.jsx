@@ -3,20 +3,25 @@ import usePlayerStore from '../../store/usePlayerStore';
 import PlayerControls from './PlayerControls';
 import ProgressBar    from './ProgressBar';
 import LyricsView     from './LyricsView';
-import usePlaylistStore from '../../store/usePlaylistStore';
+import AnimatedLikeButton from './AnimatedLikeButton';
 
 // Upgrade YouTube thumbnail to highest available resolution
 // YouTube supports: default(120) → mqdefault(320) → hqdefault(480) → sddefault(640) → maxresdefault(1280)
 function getBestThumbnail(url) {
   if (!url) return '/logo-dark.png';
   // If it's a YouTube thumbnail URL, upgrade to maxresdefault
-  if (url.includes('ytimg.com') || url.includes('youtube.com')) {
+  if (
+    url.includes('ytimg.com') ||
+    url.includes('youtube.com') ||
+    url.includes('googleusercontent.com') ||
+    url.includes('ggpht.com')
+  ) {
     return url
       .replace(/\/default\.jpg/, '/maxresdefault.jpg')
       .replace(/\/mqdefault\.jpg/, '/maxresdefault.jpg')
       .replace(/\/hqdefault\.jpg/, '/maxresdefault.jpg')
       .replace(/\/sddefault\.jpg/, '/maxresdefault.jpg')
-      .replace(/=w\d+-h\d+/, '=w1280-h1280')  // YouTube Music format
+      .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')  // YouTube Music format
       .replace(/=s\d+/, '=s1280');              // Google APIs format
   }
   return url;
@@ -28,11 +33,8 @@ export default function FullPlayer() {
   const setVolume        = usePlayerStore(s => s.setVolume);
   const setShowFullPlayer = usePlayerStore(s => s.setShowFullPlayer);
   const [tab, setTab]    = useState('player'); // 'player' | 'lyrics'
-  const isSongLiked      = usePlaylistStore(s => s.isSongLiked);
-  const toggleLike       = usePlaylistStore(s => s.toggleLike);
 
   if (!currentSong) return null;
-  const liked = isSongLiked(currentSong.videoId);
 
   return (
     <div className="fixed inset-0 z-50 bg-surface flex flex-col">
@@ -47,17 +49,11 @@ export default function FullPlayer() {
           </svg>
         </button>
         <p className="text-sm text-gray-400 font-medium">Now Playing</p>
-        <button
-          type="button"
-          onClick={() => toggleLike(currentSong)}
-          className={`p-2 rounded-full transition-colors
-            ${liked ? 'text-primary' : 'text-gray-400 hover:text-white'}`}
-          aria-label={liked ? 'Unlike' : 'Like'}
-        >
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
-          </svg>
-        </button>
+        <AnimatedLikeButton
+          song={currentSong}
+          className="p-2 rounded-full"
+          iconClassName="w-6 h-6"
+        />
       </div>
 
       {/* Tab switcher */}
@@ -110,9 +106,9 @@ export default function FullPlayer() {
               type="range" min="0" max="1" step="0.01"
               value={volume}
               onChange={e => setVolume(parseFloat(e.target.value))}
-              className="flex-1 accent-primary"
+              className="flex-1 accent-[#FCFFF9]"
               style={{
-                background: `linear-gradient(to right, #1DB954 ${volume * 100}%, #535353 ${volume * 100}%)`,
+                background: `linear-gradient(to right, #FCFFF9 ${volume * 100}%, #535353 ${volume * 100}%)`,
               }}
             />
             <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">

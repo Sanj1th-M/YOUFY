@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import usePlayerStore from '../../store/usePlayerStore';
 import usePlaylistStore from '../../store/usePlaylistStore';
+import { isSystemLikedPlaylist } from '../../utils/playlists';
 
 function fmt(s) {
   if (!s || isNaN(s)) return '';
@@ -27,13 +28,16 @@ function QueueItemMenu({ song, index, queueLength, onClose }) {
 
   const playlists = usePlaylistStore(s => s.playlists);
   const addSongToPlaylist = usePlaylistStore(s => s.addSong);
-  const isSongLiked = usePlaylistStore(s => s.isSongLiked);
   const toggleLike = usePlaylistStore(s => s.toggleLike);
 
   const addToQueue = usePlayerStore(s => s.addToQueue);
   const removeFromQueue = usePlayerStore(s => s.removeFromQueue);
 
-  const liked = isSongLiked(song?.videoId);
+  const liked = usePlaylistStore((s) => {
+    if (!song?.videoId) return false;
+    const likedPlaylist = s.playlists.find(isSystemLikedPlaylist);
+    return Boolean(likedPlaylist?.songs?.some((playlistSong) => playlistSong?.videoId === song.videoId));
+  });
 
   useOutsideClick(menuRef, onClose, true);
 
@@ -145,7 +149,7 @@ export default function QueuePanel({ onClose }) {
       role="dialog"
       aria-label="Queue"
       className="fixed right-4 bottom-[100px] w-[420px] max-w-[calc(100vw-32px)] z-[60]
-                 bg-elevated border border-white/10 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+                 bg-black border border-white/10 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div>

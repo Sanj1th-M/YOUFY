@@ -122,7 +122,7 @@ nano .env
 PORT=3000
 FIREBASE_PROJECT_ID=your-firebase-project-id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR KEY HERE\n-----END PRIVATE KEY-----\n"
+FIREBASE_PRIVATE_KEY="<service-account-private-key-with-escaped-newlines>"
 ```
 
 > ⚠️ The private key must have `\n` for each newline. Paste exactly as it appears

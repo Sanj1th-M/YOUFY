@@ -7,7 +7,7 @@ export default function Search() {
   return (
     <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
       {/* Search bar */}
-      <div className="relative mb-8 max-w-2xl">
+      <div className="relative mb-8 max-w-2xl mx-auto">
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
           fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -19,7 +19,8 @@ export default function Search() {
           placeholder="Search songs, artists, albums..."
           autoFocus
           className="w-full bg-elevated text-white rounded-full pl-12 pr-12 py-3.5 text-sm
-                     border border-subtle focus:border-primary outline-none transition-colors"
+                     border border-subtle outline-none transition-all duration-300
+                     focus:border-[#FCFFF9] focus:shadow-[0_0_14px_rgba(252,255,249,0.22)]"
         />
         {query && (
           <button onClick={() => setQuery('')}

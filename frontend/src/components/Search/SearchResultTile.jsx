@@ -16,9 +16,7 @@ export default function SearchResultTile({ results }) {
   // artistPage shape when set:
   // { name, thumbnail, topSongs: [...], albums: [...], singles: [...] }
 
-  if (!results) return null;
-
-  const { songs = [], albums = [], artists = [], playlists = [] } = results;
+  const { songs = [], albums = [], artists = [], playlists = [] } = results || {};
 
   const normalizedSongs = songs
     .map(normalizeSong)
@@ -26,6 +24,8 @@ export default function SearchResultTile({ results }) {
 
   const hasAnyResults =
     normalizedSongs.length || albums.length || artists.length || playlists.length;
+
+  if (!results) return null;
 
   const tabs = [
     { id: 'all',       label: 'All',       show: true },
@@ -321,8 +321,12 @@ export default function SearchResultTile({ results }) {
                     {isLoading && (
                       <div className="absolute inset-0 rounded-full bg-black/50
                                       flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-white/60
-                                        border-t-transparent rounded-full animate-spin" />
+                        <div className="youfy-eq scale-50" aria-hidden="true">
+                          <span className="youfy-eq-bar bg-white/60" />
+                          <span className="youfy-eq-bar bg-white/60" />
+                          <span className="youfy-eq-bar bg-white/60" />
+                          <span className="youfy-eq-bar bg-white/60" />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -387,28 +391,41 @@ export default function SearchResultTile({ results }) {
       {(safeActiveTab === 'all' || safeActiveTab === 'playlists') &&
         playlists.length > 0 && (
         <section>
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <h2 className="text-white font-bold text-lg">Playlists</h2>
-            <span className="text-xs text-gray-500">Coming soon</span>
-          </div>
+          <h2 className="text-white font-bold text-lg mb-3">Playlists</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {playlists.slice(0, 15).map((p, i) => (
-              <div key={p?.playlistId || i} className="bg-elevated rounded-lg p-3 opacity-90">
-                <img
-                  src={getBestThumbnail(p?.thumbnails) || '/logo-dark.png'}
-                  alt={p?.name || 'Playlist'}
-                  className="w-full aspect-square object-cover rounded mb-2"
-                  onError={e => { e.target.src = '/logo-dark.png'; }}
-                />
-                <p className="text-white text-sm font-medium truncate">
-                  {p?.name || 'Unknown'}
-                </p>
-                <p className="text-gray-400 text-xs truncate">
-                  {p?.author?.name || p?.artist?.name || ''}
-                  {typeof p?.trackCount === 'number' ? ` • ${p.trackCount} songs` : ''}
-                </p>
-              </div>
-            ))}
+            {playlists.slice(0, 15).map((p, i) => {
+              const id = p?.playlistId || p?.browseId || '';
+              const hasId = Boolean(id);
+
+              return (
+                <button
+                  key={id || i}
+                  type="button"
+                  disabled={!hasId}
+                  onClick={() => hasId && navigate(`/playlist/${encodeURIComponent(id)}`)}
+                  className={[
+                    'bg-elevated rounded-lg p-3 transition-colors text-left',
+                    hasId
+                      ? 'hover:bg-subtle cursor-pointer'
+                      : 'opacity-60 cursor-not-allowed',
+                  ].join(' ')}
+                >
+                  <img
+                    src={getBestThumbnail(p?.thumbnails) || '/logo-dark.png'}
+                    alt={p?.name || 'Playlist'}
+                    className="w-full aspect-square object-cover rounded mb-2"
+                    onError={e => { e.target.src = '/logo-dark.png'; }}
+                  />
+                  <p className="text-white text-sm font-medium truncate">
+                    {p?.name || 'Unknown'}
+                  </p>
+                  <p className="text-gray-400 text-xs truncate">
+                    {p?.author?.name || p?.artist?.name || ''}
+                    {typeof p?.trackCount === 'number' ? ` • ${p.trackCount} songs` : ''}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
@@ -423,8 +440,8 @@ function getBestThumbnail(thumbnails, fallback = '') {
   const url = thumbnails[thumbnails.length - 1]?.url || fallback;
   if (!url) return fallback;
   return url
-    .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')
-    .replace(/=s\d+/, '=s1280');
+    .replace(/=w\d+-h\d+/, '=w512-h512')
+    .replace(/=s\d+/, '=s512');
 }
 
 function normalizeSong(s) {
@@ -432,12 +449,12 @@ function normalizeSong(s) {
   return {
     videoId:         s.videoId || '',
     title:           s.name || s.title || 'Unknown',
-    artist:          s.artist?.name
-                  || s.artists?.[0]?.name
+    artist:          (typeof s.artist === 'string' ? s.artist : s.artist?.name)
+                  || (Array.isArray(s.artists) ? s.artists[0]?.name : null)
                   || s.author?.name
                   || 'Unknown',
     thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
     durationSeconds: s.duration || s.durationSeconds || 0,
-    album:           s.album?.name || s.album || '',
+    album:           (typeof s.album === 'string' ? s.album : s.album?.name) || '',
   };
-      }
+}

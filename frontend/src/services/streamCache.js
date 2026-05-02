@@ -23,6 +23,10 @@ export function setCachedUrl(videoId, url) {
   });
 }
 
+export function removeCachedUrl(videoId) {
+  cache.delete(videoId);
+}
+
 export function clearCache() {
   cache.clear();
 }

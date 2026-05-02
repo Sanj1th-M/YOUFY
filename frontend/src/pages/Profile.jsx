@@ -19,7 +19,7 @@ export default function Profile() {
 
       {/* Avatar + info */}
       <div className="flex items-center gap-5 bg-elevated rounded-2xl p-6 mb-6">
-        <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center
+        <div className="w-16 h-16 rounded-full bg-[#FCFFF9] flex items-center justify-center
                         text-black font-bold text-2xl flex-shrink-0">
           {initial}
         </div>
@@ -53,7 +53,7 @@ export default function Profile() {
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           {['Ad-Free', 'Free Forever', 'YouTube Music Source', 'Synced Lyrics'].map(tag => (
-            <span key={tag} className="bg-subtle text-primary text-xs px-3 py-1 rounded-full">
+            <span key={tag} className="bg-subtle text-[#FCFFF9] text-xs px-3 py-1 rounded-full">
               {tag}
             </span>
           ))}

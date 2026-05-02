@@ -46,8 +46,9 @@ function toRecentSongPayload(song = {}) {
 }
 
 // Stream — ALWAYS fetch fresh, NEVER cache in localStorage
+// Longer timeout for stream since yt-dlp extraction can take 10-20s
 export const getStreamUrl = (videoId) =>
-  api.get(`/stream/${videoId}`).then(r => r.data.url);
+  api.get(`/stream/${videoId}`, { timeout: 60000 }).then(r => r.data.url);
 
 // Trending
 export const getTrending = () =>
@@ -71,6 +72,7 @@ export const syncRecentlyPlayed = (song) => {
 // Playlists (JWT protected)
 export const getPlaylists          = ()                    => api.get('/playlist').then(r => r.data.playlists);
 export const createPlaylist        = (name)                => api.post('/playlist', { name }).then(r => r.data);
+export const updatePlaylist        = (id, updates)         => api.put(`/playlist/${id}`, updates).then(r => r.data);
 export const deletePlaylist        = (id)                  => api.delete(`/playlist/${id}`).then(r => r.data);
 export const addSongToPlaylist     = (playlistId, song)    => api.post(`/playlist/${playlistId}/song`, song).then(r => r.data);
 export const removeSongFromPlaylist= (playlistId, videoId) => api.delete(`/playlist/${playlistId}/song/${videoId}`).then(r => r.data);
@@ -82,3 +84,29 @@ export const getAlbumSongs = (browseId) =>
 // Fetch artist popular songs — called when user taps an artist card
 export const getArtistSongs = (artistId) =>
   api.get(`/search/artist/${artistId}`).then(r => r.data);
+
+// Fetch playlist info + videos — called when user taps a playlist card
+export const getPlaylistSongs = (playlistId) =>
+  api.get(`/search/playlist/${playlistId}`).then(r => r.data);
+
+// Playlist import
+export const getPlaylistImportConfig = () =>
+  api.get('/playlist-import/config').then(r => r.data);
+
+export const getPlaylistImportSources = () =>
+  api.get('/playlist-import/sources').then(r => r.data.sources);
+
+export const startPlaylistImportOAuth = (source) =>
+  api.post(`/playlist-import/oauth/${source}/start`).then(r => r.data);
+
+export const getImportSourcePlaylists = (source) =>
+  api.get(`/playlist-import/sources/${source}/playlists`).then(r => r.data.playlists);
+
+export const previewPlaylistImport = (source, playlistId) =>
+  api.post(`/playlist-import/sources/${source}/preview`, { playlistId }).then(r => r.data.job);
+
+export const getPlaylistImportJob = (jobId) =>
+  api.get(`/playlist-import/jobs/${jobId}`).then(r => r.data.job);
+
+export const confirmPlaylistImport = (jobId) =>
+  api.post(`/playlist-import/jobs/${jobId}/confirm`).then(r => r.data);

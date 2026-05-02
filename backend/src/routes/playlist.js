@@ -1,6 +1,11 @@
 const { Router } = require('express');
 const fs = require('../services/firestore');
-const { validatePlaylistBody, sanitizeString } = require('../middleware/validate');
+const {
+  validatePlaylistNameBody,
+  validatePlaylistUpdateBody,
+  validateSongBody,
+  sanitizeString,
+} = require('../middleware/validate');
 const r = Router();
 
 async function assertNotSystemPlaylist(req, res, playlistId) {
@@ -23,14 +28,13 @@ r.get('/', async (req, res) => {
   catch (err) { console.error('[playlist] get:', err.message); res.status(500).json({ error: 'Failed to load playlists.' }); }
 });
 
-r.post('/', validatePlaylistBody, async (req, res) => {
+r.post('/', validatePlaylistNameBody, async (req, res) => {
   const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'Missing: name' });
   try { res.status(201).json({ playlist: await fs.createPlaylist(req.user.uid, name) }); }
   catch (err) { console.error('[playlist] create:', err.message); res.status(500).json({ error: 'Failed to create playlist.' }); }
 });
 
-r.put('/:id', validatePlaylistBody, async (req, res) => {
+r.put('/:id', validatePlaylistUpdateBody, async (req, res) => {
   const id = sanitizeString(req.params.id, 50);
   // Disallow renaming/updating system playlists (e.g., Liked Songs)
   const ok = await assertNotSystemPlaylist(req, res, id);
@@ -48,8 +52,9 @@ r.delete('/:id', async (req, res) => {
   catch (err) { console.error('[playlist] delete:', err.message); res.status(500).json({ error: 'Failed to delete playlist.' }); }
 });
 
-r.post('/:id/song', validatePlaylistBody, async (req, res) => {
+r.post('/:id/song', validateSongBody, async (req, res) => {
   const id = sanitizeString(req.params.id, 50);
+  if (!req.body.videoId) return res.status(400).json({ error: 'Invalid song payload.' });
   try { await fs.addSong(req.user.uid, id, req.body); res.json({ success: true }); }
   catch (err) { console.error('[playlist] addSong:', err.message); res.status(500).json({ error: 'Failed to add song.' }); }
 });

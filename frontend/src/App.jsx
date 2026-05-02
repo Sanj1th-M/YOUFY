@@ -5,7 +5,9 @@ import Home from './pages/Home';
 import Search from './pages/Search';
 import Library from './pages/Library';
 import Profile from './pages/Profile';
+import ImportPlaylist from './pages/ImportPlaylist';
 import AlbumPage from './pages/AlbumPage';
+import PlaylistPage from './pages/PlaylistPage';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import useAuthStore from './store/useAuthStore';
@@ -25,15 +27,21 @@ export default function App() {
 
   useEffect(() => {
     if (!loading) initPlaylists(user);
-  }, [user, loading]);
+  }, [user, loading, initPlaylists]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-surface">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="text-gray-400 text-sm">Loading Youfy...</p>
+      <div className="youfy-loader-screen">
+        <div className="youfy-eq" aria-hidden="true">
+          <span className="youfy-eq-bar bg-white" />
+          <span className="youfy-eq-bar bg-white" />
+          <span className="youfy-eq-bar bg-white" />
+          <span className="youfy-eq-bar bg-white" />
         </div>
+
+        <p className="youfy-loader-copy" role="status" aria-live="polite">
+          Loading your music...
+        </p>
       </div>
     );
   }
@@ -46,7 +54,11 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/album/:browseId" element={<AlbumPage />} />
+        <Route path="/playlist/:playlistId" element={<PlaylistPage />} />
         <Route path="/library" element={<Library />} />
+        <Route path="/import-playlist" element={
+          <ProtectedRoute><ImportPlaylist /></ProtectedRoute>
+        } />
         <Route path="/profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>
         } />

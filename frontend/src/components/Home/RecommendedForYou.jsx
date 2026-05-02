@@ -64,9 +64,8 @@ function RecommendedCard({ song, onPlay }) {
     <button
       type="button"
       onClick={onPlay}
-      className="flex-shrink-0 w-[160px] bg-card hover:bg-subtle rounded-lg p-3
-                 transition-all duration-300 group cursor-pointer text-left
-                 hover:shadow-lg hover:shadow-black/30"
+      className="liquid-glass-card flex-shrink-0 w-[160px] rounded-lg p-3
+                 transition-all duration-300 group cursor-pointer text-left"
       aria-label={`Play ${song.title} by ${song.artist}`}
     >
       {/* Album Art */}
@@ -78,9 +77,9 @@ function RecommendedCard({ song, onPlay }) {
           loading="lazy"
           onError={() => setImgError(true)}
         />
-        {/* Green play button — hover reveal */}
+        {/* Bluish-white play button — hover reveal */}
         <div
-          className="absolute bottom-2 right-2 w-10 h-10 bg-primary rounded-full
+          className="absolute bottom-2 right-2 w-10 h-10 bg-[#dbeafe] rounded-full
                       flex items-center justify-center shadow-xl shadow-black/50
                       opacity-0 translate-y-2
                       group-hover:opacity-100 group-hover:translate-y-0
@@ -98,7 +97,7 @@ function RecommendedCard({ song, onPlay }) {
               {[0, 1, 2].map((j) => (
                 <div
                   key={j}
-                  className="w-1 bg-primary rounded-full animate-bounce"
+                  className="w-1 bg-[#dbeafe] rounded-full animate-bounce"
                   style={{
                     height: `${(j + 1) * 4 + 4}px`,
                     animationDelay: `${j * 0.15}s`,
@@ -113,8 +112,9 @@ function RecommendedCard({ song, onPlay }) {
       {/* Title */}
       <p
         className={`text-sm font-semibold truncate ${
-          isActive ? 'text-primary' : 'text-white'
+          isActive && isPlaying ? 'playing-title-shimmer' : isActive ? 'text-[#dbeafe]' : 'text-white'
         }`}
+        data-text={song.title}
       >
         {song.title}
       </p>

@@ -1,48 +1,42 @@
 /*
  * Hardened yt-dlp extraction service for YOUFY.
- * Handles format fallbacks, cookie/proxy support, retries, caching, and logs.
+ * Optimized for resilience — uses sequential extraction with smart fallback
+ * to maximize success rate despite YouTube's JS challenge requirements.
+ *
+ * Key design decisions:
+ *  - 45s timeout per attempt (YouTube JS challenge solver via Deno takes 8-20s)
+ *  - --no-warnings flag prevents stderr warnings from being treated as failures
+ *  - Fallback uses tv_embedded client (android_music is dead since ~2026.03)
+ *  - stdout-first URL extraction: even if yt-dlp exits with code 1, we check
+ *    stdout for a valid URL before treating it as a failure
  */
 
 const { execFile } = require('child_process');
 const fs = require('fs');
-const axios = require('axios');
+const path = require('path');
+const { URL } = require('url');
 
-const CACHE_TTL_MS = 4 * 60 * 60 * 1000;
-const RETRY_DELAY_MS = 2 * 1000;
-const RETRY_ATTEMPTS = 3;
-const YT_DLP_TIMEOUT_MS = 30 * 1000;
+// YouTube video IDs are always exactly 11 alphanumeric chars + - _
+const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 
-const streamCache = new Map();
-let hasWarnedAboutMissingCookies = false;
-
-const FORMAT_CHAIN = [
-  { label: 'bestaudio[ext=webm]/bestaudio[ext=m4a]', selector: 'bestaudio[ext=webm]/bestaudio[ext=m4a]' },
-  { label: 'bestaudio', selector: 'bestaudio' },
-  { label: '18', selector: '18' },
-  { label: 'worst[acodec!=none]', selector: 'worst[acodec!=none]' },
-  { label: 'worstvideo+bestaudio', selector: 'worstvideo+bestaudio' },
+// Trusted domains that yt-dlp may return streaming URLs from
+const TRUSTED_STREAM_DOMAINS = [
+  '.googlevideo.com',
+  '.youtube.com',
+  '.ytimg.com',
+  '.googleusercontent.com',
 ];
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const CACHE_TTL_MS = 5 * 60 * 60 * 1000;
 
-function shouldRetry(message) {
-  if (!message) {
-    return true;
-  }
+// 45s — YouTube's JS challenge solver (Deno) routinely takes 10-25s.
+// 15s was killing most extractions before they could finish.
+const YT_DLP_TIMEOUT_MS = 45 * 1000;
 
-  const normalized = message.toLowerCase();
-  const permanentPatterns = [
-    'requested format is not available',
-    'yt-dlp returned empty url',
-    'no audio format found',
-    'unsupported url',
-    'unsupported error',
-  ];
-
-  return !permanentPatterns.some((pattern) => normalized.includes(pattern));
-}
+const streamCache = new Map();
+const inflightExtractions = new Map();
+let hasWarnedAboutMissingCookies = false;
+const BACKEND_ROOT = path.resolve(__dirname, '..', '..');
 
 function logExtraction(details) {
   console.log('[YOUFY STREAM]', JSON.stringify(details));
@@ -50,15 +44,11 @@ function logExtraction(details) {
 
 function getCacheEntry(videoId) {
   const cached = streamCache.get(videoId);
-  if (!cached) {
-    return null;
-  }
-
+  if (!cached) return null;
   if (cached.expiresAt <= Date.now()) {
     streamCache.delete(videoId);
     return null;
   }
-
   return cached;
 }
 
@@ -69,14 +59,29 @@ function setCacheEntry(videoId, data) {
   });
 }
 
+function resolveFilePath(filePath) {
+  if (!filePath) return null;
+  if (path.isAbsolute(filePath)) {
+    return filePath;
+  }
+
+  const cwdCandidate = path.resolve(process.cwd(), filePath);
+  if (fs.existsSync(cwdCandidate)) {
+    return cwdCandidate;
+  }
+
+  return path.resolve(BACKEND_ROOT, filePath);
+}
+
 function resolveCookieArgs() {
   const args = [];
   const cookiesPath = process.env.YT_DLP_COOKIES?.trim();
   const cookiesFromBrowser = process.env.YT_DLP_COOKIES_FROM_BROWSER?.trim();
+  const resolvedCookiesPath = resolveFilePath(cookiesPath);
 
   if (cookiesPath) {
-    if (fs.existsSync(cookiesPath)) {
-      args.push('--cookies', cookiesPath);
+    if (resolvedCookiesPath && fs.existsSync(resolvedCookiesPath)) {
+      args.push('--cookies', resolvedCookiesPath);
     } else {
       console.warn(`[YOUFY STREAM] cookies file not found: ${cookiesPath}`);
     }
@@ -94,195 +99,217 @@ function resolveCookieArgs() {
   return args;
 }
 
-function buildYtDlpArgs(videoId, formatSelector) {
+function buildYtDlpArgs(videoId, extraArgs = []) {
+  // Defense-in-depth: re-validate even though middleware already checked
+  if (!VIDEO_ID_REGEX.test(videoId)) {
+    throw new Error('Invalid video ID');
+  }
+
   const args = [
-    '--remote-components', 'ejs:github',
-    '--js-runtimes', 'node',
-    '--format', formatSelector,
+    '-f', '140/bestaudio[ext=m4a]/bestaudio/best',
     '--get-url',
     '--no-playlist',
+    '--no-warnings',  // Prevent non-fatal warnings from polluting stderr
     ...resolveCookieArgs(),
+    ...extraArgs,
   ];
 
   const proxy = process.env.YT_DLP_PROXY?.trim();
   if (proxy) {
+    // Strict proxy format: protocol://host:port only
+    const PROXY_REGEX = /^(socks5|http|https):\/\/[a-zA-Z0-9._-]+:\d{1,5}$/;
+    if (!PROXY_REGEX.test(proxy)) {
+      throw new Error('Invalid proxy format. Expected: protocol://host:port');
+    }
     args.push('--proxy', proxy);
   }
 
-  args.push(`https://www.youtube.com/watch?v=${videoId}`);
+  // '--' stops yt-dlp from interpreting further args as flags
+  args.push('--', `https://www.youtube.com/watch?v=${videoId}`);
   return args;
 }
 
-async function runYtDlp(videoId, format) {
-  const args = buildYtDlpArgs(videoId, format.selector);
+/**
+ * Extracts a valid URL from yt-dlp stdout.
+ * yt-dlp sometimes exits with code 1 even on success (due to non-fatal warnings),
+ * so we always check stdout for a valid URL before treating the exit as a failure.
+ */
+function extractUrlFromOutput(stdout) {
+  if (!stdout) return null;
+
+  const lines = stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  // Find lines that are actual URLs (start with http)
+  const urlLines = lines.filter((line) => line.startsWith('http'));
+  if (!urlLines.length) return null;
+
+  // Prefer the last URL (yt-dlp prints the audio URL last when multiple formats exist)
+  return urlLines[urlLines.length - 1];
+}
+
+function validateStreamUrl(streamUrl) {
+  try {
+    const parsed = new URL(streamUrl);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return { valid: false, reason: 'untrusted protocol' };
+    }
+    const isTrusted = TRUSTED_STREAM_DOMAINS.some(
+      (domain) => parsed.hostname === domain.slice(1) || parsed.hostname.endsWith(domain)
+    );
+    if (!isTrusted) {
+      return { valid: false, reason: 'untrusted domain' };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, reason: 'malformed URL' };
+  }
+}
+
+async function runYtDlpAttempt(videoId, extraArgs = []) {
+  const args = buildYtDlpArgs(videoId, extraArgs);
 
   return new Promise((resolve, reject) => {
     execFile('yt-dlp', args, { timeout: YT_DLP_TIMEOUT_MS }, (error, stdout, stderr) => {
+      // CRITICAL FIX: yt-dlp can exit with code 1 even when it successfully
+      // extracts the URL (e.g., due to non-fatal warnings about PO tokens).
+      // Always check stdout for a valid URL before treating exit code as failure.
+      const streamUrl = extractUrlFromOutput(stdout || '');
+
+      if (streamUrl) {
+        const validation = validateStreamUrl(streamUrl);
+        if (validation.valid) {
+          return resolve({ url: streamUrl, format: 'bestaudio' });
+        }
+        return reject(new Error(`yt-dlp returned URL with ${validation.reason}`));
+      }
+
+      // No valid URL found in stdout — this is a real failure
       if (error) {
-        const stderrMessage = stderr?.trim();
-        const message = stderrMessage || error.message || 'yt-dlp failed';
-        reject(new Error(message));
-        return;
+        const stderrMessage = stderr?.trim() || '';
+        const errorMessage = stderrMessage || error.message || 'yt-dlp failed';
+        return reject(new Error(errorMessage));
       }
 
-      const urls = stdout
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-      if (!urls.length) {
-        reject(new Error('yt-dlp returned empty URL'));
-        return;
-      }
-
-      resolve({
-        url: urls.length > 1 ? urls[urls.length - 1] : urls[0],
-        format: format.label,
-      });
+      return reject(new Error('yt-dlp returned empty output'));
     });
   });
 }
 
-async function extractWithRetries(videoId, format, cacheStatus) {
-  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt += 1) {
-    const startedAt = Date.now();
+/**
+ * Classify error to determine if retry/fallback is worthwhile.
+ */
+function classifyError(message) {
+  const normalized = (message || '').toLowerCase();
 
-    try {
-      const result = await runYtDlp(videoId, format);
-      logExtraction({
-        videoId,
-        format: format.label,
-        cacheStatus,
-        success: true,
-        failure: null,
-        attempt,
-        timeTakenMs: Date.now() - startedAt,
-      });
-      return result;
-    } catch (error) {
-      const message = error.message || 'Unknown yt-dlp failure';
-      logExtraction({
-        videoId,
-        format: format.label,
-        cacheStatus,
-        success: false,
-        failure: message,
-        attempt,
-        timeTakenMs: Date.now() - startedAt,
-      });
-
-      if (attempt >= RETRY_ATTEMPTS) {
-        throw new Error(message);
-      }
-
-      if (!shouldRetry(message)) {
-        throw new Error(message);
-      }
-
-      console.warn(`[YOUFY STREAM] retrying videoId=${videoId} format=${format.label} attempt=${attempt + 1} reason=${message}`);
-      await sleep(RETRY_DELAY_MS);
-    }
+  if (normalized.includes('sign in to confirm') ||
+      normalized.includes('429') ||
+      normalized.includes('too many requests')) {
+    return 'BOT_BLOCK';
   }
-
-  throw new Error(`Retries exhausted for ${videoId}`);
+  if (normalized.includes('timed out') ||
+      normalized.includes('killed') ||
+      normalized.includes('etimedout')) {
+    return 'TIMEOUT';
+  }
+  if (normalized.includes('unavailable') ||
+      normalized.includes('private video') ||
+      normalized.includes('removed')) {
+    return 'VIDEO_UNAVAILABLE';
+  }
+  return 'UNKNOWN';
 }
 
-async function extractWithInnertube(videoId, cacheStatus) {
+async function runYtDlp(videoId) {
   const startedAt = Date.now();
 
   try {
-    const response = await axios.post(
-      'https://www.youtube.com/youtubei/v1/player',
-      {
-        videoId,
-        context: {
-          client: { clientName: 'ANDROID', clientVersion: '17.31.35' },
-        },
-      },
-      { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
-    );
+    // Primary attempt: use iOS and Android clients (significantly faster, ~9s vs 20s for web clients)
+    const extracted = await runYtDlpAttempt(videoId, [
+      '--extractor-args',
+      'youtube:player_client=ios,android',
+    ]);
+    logExtraction({ videoId, success: true, failure: null, timeTakenMs: Date.now() - startedAt });
+    return extracted;
+  } catch (primaryError) {
+    const errorType = classifyError(primaryError.message);
 
-    const formats = response.data?.streamingData?.adaptiveFormats || [];
-    const audio = formats.find((candidate) => candidate.mimeType?.startsWith('audio/'));
-    if (!audio?.url) {
-      throw new Error('Innertube: no audio format found');
+    // Don't waste time on fallback if the video itself is unavailable
+    if (errorType === 'VIDEO_UNAVAILABLE') {
+      logExtraction({ videoId, success: false, failure: primaryError.message, errorType, timeTakenMs: Date.now() - startedAt });
+      throw new Error(primaryError.message);
     }
 
-    logExtraction({
-      videoId,
-      format: 'innertube',
-      cacheStatus,
-      success: true,
-      failure: null,
-      attempt: 1,
-      timeTakenMs: Date.now() - startedAt,
-    });
+    if (errorType === 'BOT_BLOCK') {
+      logExtraction({ videoId, success: false, failure: primaryError.message, errorType, timeTakenMs: Date.now() - startedAt });
+      throw new Error('YOUTUBE_BOT_BLOCK: Please refresh cookies.txt');
+    }
 
-    return { url: audio.url, format: 'innertube' };
-  } catch (error) {
-    const message = error.message || 'Innertube failed';
-    logExtraction({
-      videoId,
-      format: 'innertube',
-      cacheStatus,
-      success: false,
-      failure: message,
-      attempt: 1,
-      timeTakenMs: Date.now() - startedAt,
-    });
-    throw new Error(message);
-  }
-}
+    // Fallback: try with tv_embedded client (lighter weight, different code path)
+    // android_music is dead since ~2026.03 — do NOT use it
+    console.warn(`[YOUFY STREAM] Primary extraction failed (${errorType}), retrying with tv_embedded client:`, primaryError.message);
 
-async function extractFreshStream(videoId, cacheStatus) {
-  const failures = [];
-
-  for (const format of FORMAT_CHAIN) {
     try {
-      return await extractWithRetries(videoId, format, cacheStatus);
-    } catch (error) {
-      failures.push(`${format.label}: ${error.message}`);
+      const extracted = await runYtDlpAttempt(videoId, [
+        '--extractor-args',
+        'youtube:player_client=tv_embedded,web',
+      ]);
+      logExtraction({
+        videoId,
+        success: true,
+        failure: null,
+        fallbackUsed: 'tv_embedded',
+        timeTakenMs: Date.now() - startedAt,
+      });
+      return extracted;
+    } catch (fallbackError) {
+      const errorMessage = fallbackError.message || primaryError.message || 'yt-dlp failed';
+
+      logExtraction({ videoId, success: false, failure: errorMessage, timeTakenMs: Date.now() - startedAt });
+
+      const fallbackType = classifyError(errorMessage);
+      if (fallbackType === 'BOT_BLOCK') {
+        throw new Error('YOUTUBE_BOT_BLOCK: Please refresh cookies.txt');
+      }
+
+      throw new Error(errorMessage);
     }
   }
-
-  try {
-    return await extractWithInnertube(videoId, cacheStatus);
-  } catch (error) {
-    failures.push(`innertube: ${error.message}`);
-  }
-
-  throw new Error(failures.join(' | '));
 }
 
 /**
- * Returns stream metadata for a YouTube video, using a 4-hour in-memory cache.
- * @param {string} videoId
- * @returns {Promise<{url: string, format: string, cacheStatus: string}>}
+ * Returns stream metadata for a YouTube video, using a 5-hour in-memory cache.
  */
 async function getStreamInfo(videoId) {
   const cached = getCacheEntry(videoId);
   if (cached) {
-    logExtraction({
-      videoId,
-      format: cached.format,
-      cacheStatus: 'hit',
-      success: true,
-      failure: null,
-      attempt: 0,
-      timeTakenMs: 0,
-    });
+    logExtraction({ videoId, cacheStatus: 'hit', success: true, timeTakenMs: 0 });
     return { url: cached.url, format: cached.format, cacheStatus: 'hit' };
   }
 
-  const extracted = await extractFreshStream(videoId, 'miss');
-  setCacheEntry(videoId, extracted);
-  return { ...extracted, cacheStatus: 'miss' };
+  if (inflightExtractions.has(videoId)) {
+    return inflightExtractions.get(videoId);
+  }
+
+  // extract fresh, no loops, no innertube
+  const extraction = runYtDlp(videoId)
+    .then((extracted) => {
+      setCacheEntry(videoId, extracted);
+      return { ...extracted, cacheStatus: 'miss' };
+    })
+    .finally(() => {
+      inflightExtractions.delete(videoId);
+    });
+
+  inflightExtractions.set(videoId, extraction);
+  const extracted = await extraction;
+  return extracted;
 }
 
 /**
  * Returns a playable stream URL for a YouTube video.
- * @param {string} videoId
- * @returns {Promise<string>}
  */
 async function getStreamUrl(videoId) {
   const stream = await getStreamInfo(videoId);

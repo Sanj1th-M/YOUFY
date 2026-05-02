@@ -77,7 +77,7 @@ export default function Register() {
       <div className="w-full max-w-sm">
 
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo-dark.png" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
+          <img src="/logo.svg?v=2" alt="Youfy" className="w-16 h-16 object-contain mb-1" />
           <h1 className="text-white text-2xl font-bold">Join Youfy</h1>
           <p className="text-gray-400 text-sm mt-1">Create your free account</p>
         </div>
@@ -105,8 +105,12 @@ export default function Register() {
                      transition-colors disabled:opacity-50"
         >
           {gLoading ? (
-            <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent
-                            rounded-full animate-spin" />
+            <div className="youfy-eq scale-50" aria-hidden="true">
+              <span className="youfy-eq-bar bg-gray-400" />
+              <span className="youfy-eq-bar bg-gray-400" />
+              <span className="youfy-eq-bar bg-gray-400" />
+              <span className="youfy-eq-bar bg-gray-400" />
+            </div>
           ) : (
             <GoogleIcon />
           )}

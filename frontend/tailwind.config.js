@@ -13,6 +13,21 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      animation: {
+        'glow-pulse': 'glow 2s ease-in-out infinite',
+      },
+      keyframes: {
+        glow: {
+          '0%, 100%': { 
+            boxShadow: '0 0 5px rgba(252, 255, 249, 0.2)', 
+            transform: 'scale(1)' 
+          },
+          '50%': { 
+            boxShadow: '0 0 15px rgba(252, 255, 249, 0.5)', 
+            transform: 'scale(1.05)' 
+          },
+        }
+      }
     },
   },
   plugins: [],

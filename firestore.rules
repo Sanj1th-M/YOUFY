@@ -1,13 +1,75 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedInAs(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function optionalString(field, maxLength) {
+      return !(field in request.resource.data)
+             || (request.resource.data[field] is string
+                 && request.resource.data[field].size() <= maxLength);
+    }
+
+    function optionalNumber(field, minValue, maxValue) {
+      return !(field in request.resource.data)
+             || (request.resource.data[field] is number
+                 && request.resource.data[field] >= minValue
+                 && request.resource.data[field] <= maxValue);
+    }
+
+    function optionalBool(field) {
+      return !(field in request.resource.data)
+             || request.resource.data[field] is bool;
+    }
+
+    function optionalTimestamp(field) {
+      return !(field in request.resource.data)
+             || request.resource.data[field] is timestamp;
+    }
+
+    function validSongInteraction(docId) {
+      return request.resource.data.keys().hasOnly([
+               'videoId',
+               'title',
+               'artist',
+               'genre',
+               'thumbnail',
+               'songDuration',
+               'score',
+               'playCount',
+               'totalListenTime',
+               'liked',
+               'skipped',
+               'addedToPlaylist',
+               'createdAt',
+               'lastPlayed'
+             ])
+             && request.resource.data.videoId == docId
+             && docId.matches('^[A-Za-z0-9_-]{11}$')
+             && optionalString('title', 200)
+             && optionalString('artist', 200)
+             && optionalString('genre', 100)
+             && optionalString('thumbnail', 500)
+             && optionalNumber('songDuration', 0, 86400)
+             && optionalNumber('score', 0, 100000)
+             && optionalNumber('playCount', 0, 100000)
+             && optionalNumber('totalListenTime', 0, 315360000)
+             && optionalBool('liked')
+             && optionalBool('skipped')
+             && optionalBool('addedToPlaylist')
+             && optionalTimestamp('createdAt')
+             && optionalTimestamp('lastPlayed');
+    }
 
     // ── User Song Interactions (Recommendation Engine) ──────────
     // Each user can only read/write their own interaction data.
     // No cross-user access — prevents data leakage.
     match /users/{userId}/songInteractions/{docId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+      allow read: if signedInAs(userId);
+      allow create, update: if signedInAs(userId)
+                            && validSongInteraction(docId);
+      allow delete: if false;
     }
 
     // ── Global Songs Catalog ────────────────────────────────────

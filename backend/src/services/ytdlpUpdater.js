@@ -4,13 +4,16 @@
  */
 
 const fs = require('fs/promises');
+const fsSync = require('fs');
 const { execFile } = require('child_process');
 const cron = require('node-cron');
+const path = require('path');
 
 const COOKIE_WARNING_DAYS = 14;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 let jobsStarted = false;
+const BACKEND_ROOT = path.resolve(__dirname, '..', '..');
 
 function logWithTimestamp(level, message) {
   const timestamp = new Date().toISOString();
@@ -29,6 +32,20 @@ function execFileAsync(command, args) {
       resolve({ stdout, stderr });
     });
   });
+}
+
+function resolveFilePath(filePath) {
+  if (!filePath) return null;
+  if (path.isAbsolute(filePath)) {
+    return filePath;
+  }
+
+  const cwdCandidate = path.resolve(process.cwd(), filePath);
+  if (fsSync.existsSync(cwdCandidate)) {
+    return cwdCandidate;
+  }
+
+  return path.resolve(BACKEND_ROOT, filePath);
 }
 
 async function updateYtDlp() {
@@ -60,12 +77,14 @@ function parseCookieLine(line) {
 
 async function checkCookieFreshness() {
   const cookiesPath = process.env.YT_DLP_COOKIES?.trim();
-  if (!cookiesPath) {
+  const resolvedCookiesPath = resolveFilePath(cookiesPath);
+
+  if (!cookiesPath || !resolvedCookiesPath) {
     return;
   }
 
   try {
-    const fileContents = await fs.readFile(cookiesPath, 'utf8');
+    const fileContents = await fs.readFile(resolvedCookiesPath, 'utf8');
     const youtubeCookies = fileContents
       .split(/\r?\n/)
       .map((line) => line.trim())

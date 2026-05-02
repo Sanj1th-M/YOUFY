@@ -6,7 +6,7 @@
   "scripts": {
     "prepare": "husky",
     "lint-staged": "lint-staged",
-    "secretlint": "secretlint"
+    "secretlint": "secretlint \"**/*\""
   },
   "devDependencies": {
     "@secretlint/secretlint-rule-preset-recommend": "^9.3.0",

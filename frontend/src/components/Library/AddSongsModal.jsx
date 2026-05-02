@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import usePlaylistStore from '../../store/usePlaylistStore';
 import { searchMusic } from '../../services/api';
 import usePlayerStore from '../../store/usePlayerStore';
+import { getPlaylistArtworkSources } from './PlaylistArtwork';
 
 function getBestThumbnail(thumbnails, fallback = '') {
   if (!thumbnails || !thumbnails.length) return fallback;
@@ -17,16 +18,17 @@ function getBestThumbnail(thumbnails, fallback = '') {
 
 function normalizeSong(s) {
   return {
-    videoId:         s.videoId,
-    title:           s.name || s.title || 'Unknown',
-    artist:          s.artist?.name || s.artists?.[0]?.name || 'Unknown',
-    thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
+    videoId: s.videoId,
+    title: s.name || s.title || 'Unknown',
+    artist: s.artist?.name || s.artists?.[0]?.name || 'Unknown',
+    thumbnail: getBestThumbnail(s.thumbnails) || s.thumbnail || '',
     durationSeconds: s.duration || 0,
-    album:           s.album?.name || '',
+    album: s.album?.name || '',
   };
 }
 
 export default function AddSongsModal({ playlist, onClose }) {
+  const ANIMATION_MS = 220;
   const addSong = usePlaylistStore(s => s.addSong);
   const playSong = usePlayerStore(s => s.playSong);
   const togglePlay = usePlayerStore(s => s.togglePlay);
@@ -36,19 +38,33 @@ export default function AddSongsModal({ playlist, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [results, setResults] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
 
   const existingIds = useMemo(() => new Set((playlist?.songs || []).map(s => s.videoId)), [playlist]);
   const playlistSongs = playlist?.songs || [];
-  const canPlay = playlistSongs.length > 0;
+  const coverThumb = getPlaylistArtworkSources(playlist, playlistSongs)[0] || '/logo-dark.png';
 
-  // Firestore arrayUnion doesn't guarantee order; treat playlist as active if ANY track matches.
-  const isPlaylistActive = Boolean(
-    canPlay && currentSong?.videoId && playlistSongs.some(s => s?.videoId === currentSong.videoId)
-  );
-  const coverIsPlaying = isPlaylistActive && isPlaying;
-  const coverThumb =
-    (isPlaylistActive ? currentSong?.thumbnail : playlistSongs[0]?.thumbnail)
-    || '/logo-dark.png';
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIsOpen(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  const closeModal = () => {
+    setIsOpen(false);
+    window.setTimeout(() => {
+      onClose?.();
+    }, ANIMATION_MS);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -88,15 +104,19 @@ export default function AddSongsModal({ playlist, onClose }) {
       <button
         type="button"
         aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/70"
+        onClick={closeModal}
+        className={`absolute inset-0 transition-opacity duration-200 ${isOpen ? 'bg-black/70 opacity-100' : 'bg-black/0 opacity-0'
+          }`}
       />
 
-      <div className="absolute left-1/2 top-1/2 w-[94vw] max-w-xl -translate-x-1/2 -translate-y-1/2
-                      bg-elevated border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div className={`absolute left-1/2 top-1/2 w-[94vw] max-w-xl -translate-x-1/2 -translate-y-1/2
+                      bg-elevated border border-white/10 rounded-2xl overflow-hidden shadow-2xl
+                      transition-all duration-200 ease-out ${isOpen
+          ? 'opacity-100 scale-100 translate-y-[-50%]'
+          : 'opacity-0 scale-95 translate-y-[calc(-50%+10px)]'
+        }`}>
         <div className="p-4 border-b border-white/5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Playlist cover + play */}
             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-subtle">
               <img
                 src={coverThumb}
@@ -105,65 +125,38 @@ export default function AddSongsModal({ playlist, onClose }) {
                 loading="lazy"
                 referrerPolicy="no-referrer"
                 crossOrigin="anonymous"
-                onError={e => { e.target.src = '/logo-dark.png'; }}
+                onError={e => { e.target.src = '/logo.svg'; }}
               />
-              {canPlay && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isPlaylistActive) {
-                      togglePlay();
-                      return;
-                    }
-                    playSong(playlistSongs[0], playlistSongs.slice(1));
-                  }}
-                  aria-label={coverIsPlaying ? 'Pause playlist' : 'Play playlist'}
-                  className="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/35 transition-colors"
-                >
-                  <span className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center">
-                    {coverIsPlaying ? (
-                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    )}
-                  </span>
-                </button>
-              )}
             </div>
 
             <div className="min-w-0">
-            <p className="text-white font-bold truncate">Add songs</p>
-            <p className="text-gray-400 text-xs truncate">{playlist.name}</p>
+              <p className="text-white font-bold truncate">add songs</p>
+              <p className="text-gray-400 text-xs truncate">{playlist.name}</p>
             </div>
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeModal}
             className="text-gray-400 hover:text-white transition-colors p-2"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>
           </button>
         </div>
 
         <div className="p-4">
-          <div className="relative">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+          <div className="group relative overflow-hidden rounded-full border border-white/20 bg-white/[0.06] transition-all duration-200 hover:border-white/35 hover:bg-white/[0.1] focus-within:border-white focus-within:bg-white/[0.12] focus-within:shadow-[0_0_0_1px_rgba(255,255,255,0.95)]">
+            <svg className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/65 transition-colors duration-200 group-hover:text-white/90 group-focus-within:text-white"
               fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
             </svg>
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search songs to add..."
-              className="w-full bg-black/40 text-white rounded-full pl-12 pr-4 py-3 text-sm
-                         border border-subtle focus:border-primary outline-none"
+              className="w-full bg-transparent text-white placeholder:text-white/55 rounded-full pl-12 pr-4 py-3.5 text-sm outline-none"
               autoFocus
             />
           </div>
@@ -171,7 +164,7 @@ export default function AddSongsModal({ playlist, onClose }) {
           <div className="mt-4 max-h-[55vh] overflow-y-auto no-scrollbar">
             {!query.trim() && (
               <div className="py-10 text-center text-gray-500 text-sm">
-                Search for a song, then tap <span className="text-white">Add</span>.
+                Search for a song, then tap <span className="text-white">add</span>.
               </div>
             )}
 
@@ -232,11 +225,11 @@ export default function AddSongsModal({ playlist, onClose }) {
                           <span className="w-7 h-7 rounded-full bg-black/45 flex items-center justify-center">
                             {rowIsPlaying ? (
                               <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                               </svg>
                             ) : (
                               <svg className="w-3.5 h-3.5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
+                                <path d="M8 5v14l11-7z" />
                               </svg>
                             )}
                           </span>
@@ -250,11 +243,9 @@ export default function AddSongsModal({ playlist, onClose }) {
                         type="button"
                         disabled={already}
                         onClick={() => addSong(playlist.id, song)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold
-                                   bg-primary text-black disabled:opacity-40 disabled:cursor-not-allowed
-                                   hover:bg-green-400 transition-colors"
+                        className="liquid-glass-button min-w-[54px] px-3 py-1.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {already ? 'Added' : 'Add'}
+                        <span className="liquid-glass-content">{already ? 'Added' : 'Add'}</span>
                       </button>
                     </div>
                   );
@@ -271,4 +262,3 @@ export default function AddSongsModal({ playlist, onClose }) {
     </div>
   );
 }
-

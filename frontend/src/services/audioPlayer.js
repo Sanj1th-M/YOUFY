@@ -4,15 +4,65 @@
 class AudioPlayer {
   constructor() {
     this.audio = new Audio();
-    this.audio.preload = 'metadata';
+    this.audio.preload = 'auto';
+    this._abortController = null;
+    this._listeners = {};
     this._setupMediaSession();
   }
 
-  // Always fetch fresh URL from /stream/:videoId — never cache
+  /**
+   * Play a new URL. Aborts any in-progress load first.
+   * Returns only after audio actually starts playing.
+   */
   async play(url, song) {
+    // Abort any previous load — prevents race conditions
+    if (this._abortController) {
+      this._abortController.abort();
+    }
+    this._abortController = new AbortController();
+    const { signal } = this._abortController;
+
+    // Pause current playback immediately (user sees instant feedback)
+    this.audio.pause();
+
+    // Set new source
     this.audio.src = url;
-    await this.audio.play();
-    this._updateMediaSession(song);
+    this.audio.load(); // force the browser to start loading immediately
+
+    // Wait for the audio to be playable or for abort
+    await new Promise((resolve, reject) => {
+      const cleanup = () => {
+        this.audio.removeEventListener('canplay', onCanPlay);
+        this.audio.removeEventListener('error', onError);
+        signal.removeEventListener('abort', onAbort);
+      };
+
+      const onCanPlay = () => { cleanup(); resolve(); };
+      const onError = () => {
+        cleanup();
+        reject(new Error('Audio load failed'));
+      };
+      const onAbort = () => {
+        cleanup();
+        reject(new DOMException('Aborted', 'AbortError'));
+      };
+
+      // If already aborted before we even listen
+      if (signal.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'));
+        return;
+      }
+
+      this.audio.addEventListener('canplay', onCanPlay, { once: true });
+      this.audio.addEventListener('error', onError, { once: true });
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
+
+    // If we weren't aborted, play
+    if (!signal.aborted) {
+      await this.audio.play();
+      this._updateMediaSession(song);
+    }
   }
 
   pause()             { this.audio.pause(); }
@@ -25,11 +75,46 @@ class AudioPlayer {
   get paused()        { return this.audio.paused; }
   get volume()        { return this.audio.volume; }
 
-  onTimeUpdate(cb)    { this.audio.ontimeupdate = cb; }
-  onEnded(cb)         { this.audio.onended = cb; }
-  onError(cb)         { this.audio.onerror = cb; }
-  onCanPlay(cb)       { this.audio.oncanplay = cb; }
-  onWaiting(cb)       { this.audio.onwaiting = cb; }
+  // Use proper addEventListener with cleanup to prevent listener leaks
+  onTimeUpdate(cb) {
+    if (this._listeners.timeupdate) {
+      this.audio.removeEventListener('timeupdate', this._listeners.timeupdate);
+    }
+    this._listeners.timeupdate = cb;
+    this.audio.addEventListener('timeupdate', cb);
+  }
+
+  onEnded(cb) {
+    if (this._listeners.ended) {
+      this.audio.removeEventListener('ended', this._listeners.ended);
+    }
+    this._listeners.ended = cb;
+    this.audio.addEventListener('ended', cb);
+  }
+
+  onError(cb) {
+    if (this._listeners.error) {
+      this.audio.removeEventListener('error', this._listeners.error);
+    }
+    this._listeners.error = cb;
+    this.audio.addEventListener('error', cb);
+  }
+
+  onCanPlay(cb) {
+    if (this._listeners.canplay) {
+      this.audio.removeEventListener('canplay', this._listeners.canplay);
+    }
+    this._listeners.canplay = cb;
+    this.audio.addEventListener('canplay', cb);
+  }
+
+  onWaiting(cb) {
+    if (this._listeners.waiting) {
+      this.audio.removeEventListener('waiting', this._listeners.waiting);
+    }
+    this._listeners.waiting = cb;
+    this.audio.addEventListener('waiting', cb);
+  }
 
   _setupMediaSession() {
     if (!('mediaSession' in navigator)) return;

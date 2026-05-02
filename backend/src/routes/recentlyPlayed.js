@@ -1,10 +1,10 @@
 const { Router } = require('express');
 const firestore = require('../services/firestore');
-const { validatePlaylistBody } = require('../middleware/validate');
+const { validateSongBody } = require('../middleware/validate');
 
 const r = Router();
 
-r.post('/', validatePlaylistBody, async (req, res) => {
+r.post('/', validateSongBody, async (req, res) => {
   if (!req.user?.uid || !req.body?.videoId) {
     return res.status(204).end();
   }
