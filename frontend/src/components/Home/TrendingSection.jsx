@@ -50,7 +50,7 @@ export function TrendingSection({ sections }) {
                 src={song.thumbnail}
                 alt={song.title}
                 className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
-                onError={e => { e.target.src = '/logo-dark.png'; }}
+                onError={e => { e.target.src = '/logo.svg'; }}
               />
               {/* Bluish-white play button — desktop hover only */}
               <div className="absolute bottom-2 right-2 w-10 h-10 bg-[#FCFFF9] rounded-full
@@ -104,7 +104,7 @@ export function RecentlyPlayed() {
                 src={song.thumbnail}
                 alt={song.title}
                 className="h-full aspect-square object-cover flex-shrink-0"
-                onError={e => { e.target.src = '/logo-dark.png'; }}
+                onError={e => { e.target.src = '/logo.svg'; }}
               />
 
               {/* Title */}

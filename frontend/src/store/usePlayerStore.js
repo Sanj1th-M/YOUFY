@@ -328,6 +328,24 @@ const usePlayerStore = create((set, get) => ({
     });
   },
 
+  queueSongNext: (song) => {
+    if (!song?.videoId) return;
+    set((s) => {
+      if (s.currentSong?.videoId === song.videoId) return {};
+
+      const currentQueue = Array.isArray(s.queue) ? s.queue : [];
+      const remainingQueue = removeSongFromQueue(currentQueue, song.videoId);
+      const nextQueue = [song, ...remainingQueue];
+
+      warmQueueSongs(nextQueue);
+      return {
+        manualQueue: nextQueue,
+        autoQueue: [],
+        queue: nextQueue,
+      };
+    });
+  },
+
   removeFromQueue: (videoId) => {
     if (!videoId) return;
     set((s) => {

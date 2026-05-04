@@ -71,7 +71,7 @@ function RecommendedCard({ song, onPlay }) {
       {/* Album Art */}
       <div className="relative mb-3">
         <img
-          src={imgError ? '/logo-dark.png' : (song.thumbnail || '/logo-dark.png')}
+          src={imgError ? '/logo.svg' : (song.thumbnail || '/logo.svg')}
           alt={song.title}
           className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
           loading="lazy"

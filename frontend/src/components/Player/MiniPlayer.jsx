@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import usePlayerStore from '../../store/usePlayerStore';
 import AnimatedLikeButton from './AnimatedLikeButton';
 
 export default function MiniPlayer() {
+  const navigate         = useNavigate();
   const currentSong      = usePlayerStore(s => s.currentSong);
   const isPlaying        = usePlayerStore(s => s.isPlaying);
   const isLoading        = usePlayerStore(s => s.isLoading);
@@ -40,18 +42,31 @@ export default function MiniPlayer() {
             src={currentSong.thumbnail}
             alt={currentSong.title}
             className="w-10 h-10 rounded object-cover"
-            onError={e => { e.target.src = '/logo-dark.png'; }}
+            onError={e => { e.target.src = '/logo.svg'; }}
           />
         </button>
 
-        {/* Song info — tap to open full player */}
-        <button
-          onClick={() => setShowFullPlayer(true)}
-          className="flex-1 min-w-0 text-left"
-        >
-          <p className="text-white text-sm font-medium truncate">{currentSong.title}</p>
-          <p className="text-muted text-xs truncate">{currentSong.artist}</p>
-        </button>
+        {/* Song info — tap to open full player or artist to search */}
+        <div className="flex-1 min-w-0 text-left flex flex-col justify-center">
+          <button
+            type="button"
+            className="text-white text-sm font-medium truncate text-left outline-none"
+            onClick={() => setShowFullPlayer(true)}
+          >
+            {currentSong.title}
+          </button>
+          <button
+            type="button"
+            className="text-muted text-xs truncate text-left hover:underline w-fit outline-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowFullPlayer(false);
+              navigate(`/search?q=${encodeURIComponent(currentSong.artist)}`);
+            }}
+          >
+            {currentSong.artist}
+          </button>
+        </div>
 
         {/* Play / Pause */}
         <button

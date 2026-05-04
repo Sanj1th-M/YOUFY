@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import usePlayerStore from '../../store/usePlayerStore';
 import ProgressBar from './ProgressBar';
 import QueuePanel from './QueuePanel';
 import AnimatedLikeButton from './AnimatedLikeButton';
 
 export default function DesktopPlayer() {
+  const navigate = useNavigate();
   const currentSong = usePlayerStore(s => s.currentSong);
   const isPlaying   = usePlayerStore(s => s.isPlaying);
   const isLoading   = usePlayerStore(s => s.isLoading);
   const togglePlay  = usePlayerStore(s => s.togglePlay);
+  const setShowFullPlayer = usePlayerStore(s => s.setShowFullPlayer);
   const playNext    = usePlayerStore(s => s.playNext);
   const playPrev    = usePlayerStore(s => s.playPrev);
   const volume      = usePlayerStore(s => s.volume);
@@ -46,15 +49,35 @@ export default function DesktopPlayer() {
       >
       {/* ── Left: Track Info ── */}
       <div className="flex items-center gap-3 w-[30%] min-w-0">
-        <img
-          src={currentSong.thumbnail}
-          alt={currentSong.title}
-          className="w-14 h-14 rounded object-cover flex-shrink-0"
-          onError={e => { e.target.src = '/logo-dark.png'; }}
-        />
+        <button
+          type="button"
+          onClick={() => setShowFullPlayer(true)}
+          className="flex-shrink-0 rounded transition hover:opacity-80"
+          aria-label="Open full player"
+        >
+          <img
+            src={currentSong.thumbnail}
+            alt={currentSong.title}
+            className="w-14 h-14 rounded object-cover"
+            onError={e => { e.target.src = '/logo.svg'; }}
+          />
+        </button>
         <div className="min-w-0">
-          <p className="text-white text-sm font-medium truncate">{currentSong.title}</p>
-          <p className="text-muted text-xs truncate">{currentSong.artist}</p>
+          <button
+            type="button"
+            className="text-white text-sm font-medium truncate text-left outline-none block max-w-full hover:underline"
+            onClick={() => setShowFullPlayer(true)}
+          >
+            {currentSong.title}
+          </button>
+          <p 
+            className="text-muted text-xs truncate hover:underline cursor-pointer w-fit"
+            onClick={() => {
+              navigate(`/search?q=${encodeURIComponent(currentSong.artist)}`);
+            }}
+          >
+            {currentSong.artist}
+          </p>
         </div>
         <AnimatedLikeButton
           song={currentSong}

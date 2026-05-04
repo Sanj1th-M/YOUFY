@@ -227,14 +227,14 @@ function PlaylistTrackRow({ song, index, queue, canRemove = false, onRemove }) {
         aria-label={`Open ${song.title}`}
       >
         <img
-          src={song.thumbnail || '/logo-dark.png'}
+          src={song.thumbnail || '/logo.svg'}
           alt=""
           className="h-full w-full object-cover"
           loading="lazy"
           referrerPolicy="no-referrer"
           crossOrigin="anonymous"
           onError={(event) => {
-            event.currentTarget.src = '/logo-dark.png';
+            event.currentTarget.src = '/logo.svg';
           }}
         />
       </button>

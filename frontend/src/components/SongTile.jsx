@@ -30,7 +30,7 @@ export default function SongTile({ song, queue = [], compact = false }) {
           src={song.thumbnail}
           alt={song.title}
           className={`${compact ? 'w-10 h-10' : 'w-12 h-12'} rounded object-cover`}
-          onError={e => { e.target.src = '/logo-dark.png'; }}
+          onError={e => { e.target.src = '/logo.svg'; }}
         />
         {isActive && isPlaying && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">

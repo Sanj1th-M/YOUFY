@@ -50,7 +50,7 @@ export default function PlaylistArtwork({
   const artworkSources = getPlaylistArtworkSources(playlist, songs);
 
   if (artworkSources.length <= 1) {
-    const source = artworkSources[0] || '/logo-dark.png';
+    const source = artworkSources[0] || '/logo.svg';
     return (
       <div className={`overflow-hidden bg-[#111111] ${className}`}>
         <img
@@ -61,7 +61,7 @@ export default function PlaylistArtwork({
           referrerPolicy="no-referrer"
           crossOrigin="anonymous"
           onError={(event) => {
-            event.currentTarget.src = '/logo-dark.png';
+            event.currentTarget.src = '/logo.svg';
           }}
         />
       </div>
@@ -83,7 +83,7 @@ export default function PlaylistArtwork({
             referrerPolicy="no-referrer"
             crossOrigin="anonymous"
             onError={(event) => {
-              event.currentTarget.src = '/logo-dark.png';
+              event.currentTarget.src = '/logo.svg';
             }}
           />
         ) : (

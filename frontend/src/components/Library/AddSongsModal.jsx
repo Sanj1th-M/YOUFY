@@ -42,7 +42,7 @@ export default function AddSongsModal({ playlist, onClose }) {
 
   const existingIds = useMemo(() => new Set((playlist?.songs || []).map(s => s.videoId)), [playlist]);
   const playlistSongs = playlist?.songs || [];
-  const coverThumb = getPlaylistArtworkSources(playlist, playlistSongs)[0] || '/logo-dark.png';
+  const coverThumb = getPlaylistArtworkSources(playlist, playlistSongs)[0] || '/logo.svg';
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setIsOpen(true));
@@ -202,13 +202,13 @@ export default function AddSongsModal({ playlist, onClose }) {
                     >
                       <div className="relative w-11 h-11 rounded overflow-hidden flex-shrink-0 bg-subtle">
                         <img
-                          src={song.thumbnail || '/logo-dark.png'}
+                          src={song.thumbnail || '/logo.svg'}
                           alt={song.title}
                           className="w-full h-full object-cover"
                           loading="lazy"
                           referrerPolicy="no-referrer"
                           crossOrigin="anonymous"
-                          onError={e => { e.target.src = '/logo-dark.png'; }}
+                          onError={e => { e.target.src = '/logo.svg'; }}
                         />
                         <button
                           type="button"

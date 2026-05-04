@@ -27,6 +27,35 @@ export default function SearchResultTile({ results }) {
 
   if (!results) return null;
 
+  function handleArtworkError(event) {
+    const img = event.currentTarget;
+    const current = img.currentSrc || img.src || '';
+
+    // Some YouTube Music thumbnails intermittently fail (5xx/connection reset) under bursty loads.
+    // Before falling back to the site logo, try a smaller size once.
+    if (img.dataset.artRetry !== '1') {
+      img.dataset.artRetry = '1';
+
+      if (current.includes('yt3.googleusercontent.com') && /=[ws]\\d+/.test(current)) {
+        const smaller = current
+          .replace(/=w\\d+-h\\d+/, '=w226-h226')
+          .replace(/=s\\d+/, '=s226');
+        if (smaller && smaller !== current) {
+          img.src = smaller;
+          return;
+        }
+      }
+
+      // Retry the same URL once on the next tick.
+      if (current) {
+        setTimeout(() => { img.src = current; }, 250);
+        return;
+      }
+    }
+
+    img.src = '/logo.svg';
+  }
+
   const tabs = [
     { id: 'all',       label: 'All',       show: true },
     { id: 'songs',     label: 'Songs',     show: normalizedSongs.length > 0 },
@@ -75,7 +104,7 @@ export default function SearchResultTile({ results }) {
 
       setArtistPage({
         name:      data?.name      || artist?.name || 'Artist',
-        thumbnail: getBestThumbnail(data?.thumbnails || artist?.thumbnails) || '/logo-dark.png',
+        thumbnail: getBestThumbnail(data?.thumbnails || artist?.thumbnails) || '/logo.svg',
         topSongs,
         albums:    rawAlbums,
         singles:   rawSingles,
@@ -113,7 +142,7 @@ export default function SearchResultTile({ results }) {
             src={artistPage.thumbnail}
             alt={artistPage.name}
             className="w-24 h-24 rounded-full object-cover flex-shrink-0 shadow-lg"
-            onError={e => { e.target.src = '/logo-dark.png'; }}
+            onError={e => { e.target.src = '/logo.svg'; }}
           />
           <div className="min-w-0">
             <h1 className="text-white text-2xl font-bold truncate">{artistPage.name}</h1>
@@ -172,10 +201,10 @@ export default function SearchResultTile({ results }) {
                     ].join(' ')}
                   >
                     <img
-                      src={getBestThumbnail(album?.thumbnails) || '/logo-dark.png'}
+                      src={getBestThumbnail(album?.thumbnails) || '/logo.svg'}
                       alt={album?.name || 'Album'}
                       className="w-full aspect-square object-cover rounded-lg mb-2"
-                      onError={e => { e.target.src = '/logo-dark.png'; }}
+                      onError={e => { e.target.src = '/logo.svg'; }}
                     />
                     <p className="text-white text-sm font-medium truncate">
                       {album?.name || 'Unknown'}
@@ -208,10 +237,10 @@ export default function SearchResultTile({ results }) {
                     ].join(' ')}
                   >
                     <img
-                      src={getBestThumbnail(single?.thumbnails) || '/logo-dark.png'}
+                      src={getBestThumbnail(single?.thumbnails) || '/logo.svg'}
                       alt={single?.name || 'Single'}
                       className="w-full aspect-square object-cover rounded-lg mb-2"
-                      onError={e => { e.target.src = '/logo-dark.png'; }}
+                      onError={e => { e.target.src = '/logo.svg'; }}
                     />
                     <p className="text-white text-sm font-medium truncate">
                       {single?.name || 'Unknown'}
@@ -312,11 +341,15 @@ export default function SearchResultTile({ results }) {
                 >
                   <div className="relative w-20 h-20">
                     <img
-                      src={getBestThumbnail(a?.thumbnails) || '/logo-dark.png'}
+                      src={getBestThumbnail(a?.thumbnails) || a?.thumbnail || '/logo.svg'}
                       alt={a?.name || 'Artist'}
                       className="w-20 h-20 rounded-full object-cover
                                  ring-2 ring-transparent hover:ring-primary transition-all"
-                      onError={e => { e.target.src = '/logo-dark.png'; }}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      onError={handleArtworkError}
                     />
                     {isLoading && (
                       <div className="absolute inset-0 rounded-full bg-black/50
@@ -368,10 +401,14 @@ export default function SearchResultTile({ results }) {
                   ].join(' ')}
                 >
                   <img
-                    src={getBestThumbnail(album?.thumbnails) || '/logo-dark.png'}
+                    src={getBestThumbnail(album?.thumbnails) || album?.thumbnail || '/logo.svg'}
                     alt={album?.name || 'Album'}
                     className="w-full aspect-square object-cover rounded mb-2"
-                    onError={e => { e.target.src = '/logo-dark.png'; }}
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={handleArtworkError}
                   />
                   <p className="text-white text-sm font-medium truncate">
                     {album?.name || 'Unknown'}
@@ -411,10 +448,14 @@ export default function SearchResultTile({ results }) {
                   ].join(' ')}
                 >
                   <img
-                    src={getBestThumbnail(p?.thumbnails) || '/logo-dark.png'}
+                    src={getBestThumbnail(p?.thumbnails) || p?.thumbnail || '/logo.svg'}
                     alt={p?.name || 'Playlist'}
                     className="w-full aspect-square object-cover rounded mb-2"
-                    onError={e => { e.target.src = '/logo-dark.png'; }}
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={handleArtworkError}
                   />
                   <p className="text-white text-sm font-medium truncate">
                     {p?.name || 'Unknown'}

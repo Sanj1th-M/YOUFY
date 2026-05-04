@@ -138,7 +138,7 @@ export default function AlbumPage() {
   const albumName   = album?.name || 'Unknown Album';
   const artistName  = album?.artist?.name || 'Unknown Artist';
   const year        = album?.year || '';
-  const thumbnail   = getBestThumbnail(album?.thumbnails) || '/logo-dark.png';
+  const thumbnail   = getBestThumbnail(album?.thumbnails) || '/logo.svg';
   const trackCount  = songs.length;
   const totalTime   = fmtTotal(songs);
 
@@ -164,7 +164,7 @@ export default function AlbumPage() {
           alt={albumName}
           className="w-40 h-40 md:w-56 md:h-56 rounded-lg object-cover shadow-2xl
                      shadow-black/60 flex-shrink-0"
-          onError={e => { e.target.src = '/logo-dark.png'; }}
+          onError={e => { e.target.src = '/logo.svg'; }}
         />
 
         <div className="flex-1 min-w-0 text-center sm:text-left sm:pt-4">
