@@ -783,8 +783,8 @@ export default function FullPlayer() {
           </div>
 
           {/* Center: Player */}
-          <div className="flex flex-1 flex-col items-center justify-center px-6">
-            <div className="flex flex-1 items-center justify-center w-full">
+          <div className="flex flex-1 flex-col items-center justify-center px-6 min-w-0">
+            <div className="flex flex-1 items-center justify-center w-full min-h-0">
               <img
                 src={heroImage}
                 alt={currentSong.title}
@@ -793,10 +793,10 @@ export default function FullPlayer() {
               />
             </div>
 
-            <div className="mt-6 w-full text-center">
+            <div className="mt-6 w-full text-center min-w-0">
               <h2 className="text-3xl font-bold tracking-tight text-white truncate">{currentSong.title}</h2>
               <p
-                className="mt-2 text-lg text-white/75 hover:underline cursor-pointer inline-block"
+                className="mt-2 text-lg text-white/75 hover:underline cursor-pointer inline-block truncate max-w-full"
                 onClick={() => {
                   setShowFullPlayer(false);
                   navigate(`/search?q=${encodeURIComponent(currentSong.artist)}`);
