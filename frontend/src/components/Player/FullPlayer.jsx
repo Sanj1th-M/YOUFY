@@ -6,6 +6,7 @@ import { isSystemLikedPlaylist } from '../../utils/playlists';
 import PlayerControls from './PlayerControls';
 import ProgressBar from './ProgressBar';
 import LyricsView from './LyricsView';
+import { lyricsCache } from '../../hooks/useLyrics';
 import AnimatedLikeButton from './AnimatedLikeButton';
 import QueuePlaylistPickerModal from './QueuePlaylistPickerModal';
 
@@ -34,6 +35,7 @@ export default function FullPlayer() {
   const toggleLike = usePlaylistStore((state) => state.toggleLike);
   const addSongToPlaylist = usePlaylistStore((state) => state.addSong);
   const createPlaylist = usePlaylistStore((state) => state.createPlaylist);
+  const [lyricsKey, setLyricsKey] = useState(0);
   const [tab, setTab] = useState('player');
   const tabs = useMemo(() => ([
     { key: 'player', label: 'Player' },
@@ -685,15 +687,15 @@ export default function FullPlayer() {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black">
       <div
-        className="absolute inset-0 scale-110 opacity-25 blur-3xl"
+        className="absolute inset-0 scale-110 opacity-25 blur-3xl md:hidden"
         style={{
           backgroundImage: `url(${heroImage})`,
           backgroundPosition: 'center',
           backgroundSize: 'cover',
         }}
       />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_42%)]" />
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-3xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_42%)] md:hidden" />
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-3xl md:hidden" />
 
       <div className="relative flex h-full flex-col">
         <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-3">
@@ -753,32 +755,48 @@ export default function FullPlayer() {
         </div>
 
         {/* ── Desktop: 3-column layout (lyrics | player | queue) ── */}
-        <div className="hidden md:flex flex-1 overflow-hidden gap-4 px-6 pb-6">
+        <div className="hidden md:flex flex-1 overflow-hidden gap-6 px-8 pb-8">
           {/* Left: Lyrics */}
-          <div className="flex flex-1 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03]">
-            <div className="border-b border-white/5 px-5 py-3">
+          <div className="flex w-[25%] min-w-[300px] max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03]">
+            <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
               <p className="text-sm uppercase tracking-[0.18em] text-white/45">Lyrics</p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentSong?.videoId) {
+                    lyricsCache.delete(currentSong.videoId);
+                    setLyricsKey((k) => k + 1);
+                  }
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
+                aria-label="Reload lyrics"
+                title="Reload lyrics"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
             <div className="flex-1 overflow-hidden flex flex-col relative">
-              <LyricsView />
+              <LyricsView key={`desktop-${lyricsKey}`} />
             </div>
           </div>
 
           {/* Center: Player */}
-          <div className="flex w-full max-w-md flex-col items-center justify-center px-4">
+          <div className="flex flex-1 flex-col items-center justify-center px-6">
             <div className="flex flex-1 items-center justify-center w-full">
               <img
                 src={heroImage}
                 alt={currentSong.title}
-                className="aspect-square w-full max-w-[clamp(14rem,22vw,20rem)] rounded-[2rem] object-cover shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
+                className="aspect-square w-full max-w-[clamp(16rem,30vw,28rem)] rounded-[2rem] object-cover shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
                 onError={(event) => { event.target.src = '/logo.svg'; }}
               />
             </div>
 
-            <div className="mt-5 w-full text-center">
-              <h2 className="text-2xl font-bold tracking-tight text-white truncate">{currentSong.title}</h2>
+            <div className="mt-6 w-full text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-white truncate">{currentSong.title}</h2>
               <p
-                className="mt-1.5 text-base text-white/75 hover:underline cursor-pointer inline-block"
+                className="mt-2 text-lg text-white/75 hover:underline cursor-pointer inline-block"
                 onClick={() => {
                   setShowFullPlayer(false);
                   navigate(`/search?q=${encodeURIComponent(currentSong.artist)}`);
@@ -788,16 +806,16 @@ export default function FullPlayer() {
               </p>
             </div>
 
-            <div className="mt-5 w-full">
+            <div className="mt-6 w-full max-w-xl mx-auto">
               <ProgressBar />
-              <div className="mt-5 pb-4">
+              <div className="mt-6 pb-4">
                 <PlayerControls size="lg" showModeButtons />
               </div>
             </div>
           </div>
 
           {/* Right: Queue */}
-          <div className="flex flex-1 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03]">
+          <div className="flex w-[25%] min-w-[300px] max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03]">
             <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
               <div>
                 <p className="text-sm uppercase tracking-[0.18em] text-white/45">Up next</p>
@@ -895,8 +913,25 @@ export default function FullPlayer() {
           </div>
         )}
 
-        <div className={`flex-1 overflow-hidden md:hidden ${tab === 'lyrics' ? 'flex flex-col' : 'hidden'}`}>
-          <LyricsView />
+        <div className={`flex-1 overflow-hidden md:hidden relative ${tab === 'lyrics' ? 'flex flex-col' : 'hidden'}`}>
+          <div className="absolute right-4 top-2 z-10">
+            <button
+              type="button"
+              onClick={() => {
+                if (currentSong?.videoId) {
+                  lyricsCache.delete(currentSong.videoId);
+                  setLyricsKey((k) => k + 1);
+                }
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/50 backdrop-blur-md transition hover:bg-white/10 hover:text-white"
+              aria-label="Reload lyrics"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+          <LyricsView key={`mobile-${lyricsKey}`} />
         </div>
 
         {tab === 'queue' && (

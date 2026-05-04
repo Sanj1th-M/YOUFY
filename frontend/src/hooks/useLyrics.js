@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getLyrics } from '../services/api';
 
-const lyricsCache = new Map();
+export const lyricsCache = new Map();
 
 export function useLyrics(song) {
   const [lyrics,  setLyrics]  = useState({ synced: [], plain: '' });
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchLyrics = useCallback((force = false) => {
     if (!song?.videoId) return;
 
-    if (lyricsCache.has(song.videoId)) {
+    if (!force && lyricsCache.has(song.videoId)) {
       setLyrics(lyricsCache.get(song.videoId));
       setLoading(false);
       return;
@@ -26,5 +26,13 @@ export function useLyrics(song) {
       .finally(() => setLoading(false));
   }, [song?.videoId, song?.title, song?.artist]);
 
-  return { lyrics, loading };
+  useEffect(() => {
+    fetchLyrics();
+  }, [fetchLyrics]);
+
+  const refetch = useCallback(() => {
+    fetchLyrics(true);
+  }, [fetchLyrics]);
+
+  return { lyrics, loading, refetch };
 }
