@@ -841,6 +841,13 @@ export default function FullPlayer() {
                   queue.map((song, index) => (
                     <div
                       key={`${song?.videoId || index}-desktop`}
+                      ref={(node) => {
+                        if (node) {
+                          itemRefs.current.set(index, node);
+                        } else {
+                          itemRefs.current.delete(index);
+                        }
+                      }}
                       role="button"
                       tabIndex={0}
                       onClick={() => handleQueueItemClick(index)}
@@ -849,7 +856,20 @@ export default function FullPlayer() {
                         event.preventDefault();
                         handleQueueItemClick(index);
                       }}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left select-none outline-none ring-0 transition hover:bg-white/5 focus-visible:bg-white/5"
+                      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left select-none outline-none ring-0 transition ${
+                        draggingIndex === index
+                          ? 'bg-white/[0.08]'
+                          : 'hover:bg-white/5 focus-visible:bg-white/5'
+                      }`}
+                      style={{
+                        transform: draggingIndex === index
+                          ? undefined
+                          : `translate3d(0, ${getRowShift(index)}px, 0)`,
+                        transition: draggingIndex === index
+                          ? 'none'
+                          : 'transform 0.2s ease, background-color 0.2s ease',
+                        touchAction: 'pan-y',
+                      }}
                     >
                       {renderQueueRowMain(song)}
                       <div className="ml-auto flex items-center gap-2 pl-2">
