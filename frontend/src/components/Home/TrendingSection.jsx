@@ -1,4 +1,5 @@
 import usePlayerStore from '../../store/usePlayerStore';
+import { motion } from 'framer-motion';
 
 // Reliable YouTube thumbnail via i.ytimg.com (works for any videoId)
 function getYtThumbnail(videoId) {
@@ -97,68 +98,102 @@ export function RecentlyPlayed() {
   const playSong    = usePlayerStore(s => s.playSong);
   const currentSong = usePlayerStore(s => s.currentSong);
   const isPlaying   = usePlayerStore(s => s.isPlaying);
-  const recent      = JSON.parse(localStorage.getItem('recentSongs') || '[]');
+  
+  // Re-read recent songs whenever currentSong changes to ensure UI is fresh
+  const recentRaw = JSON.parse(localStorage.getItem('recentSongs') || '[]');
+  
+  // Logic: Ensure currentSong is always first in the rendered list
+  let displayRecent = [...recentRaw];
+  if (currentSong?.videoId) {
+    const currentIndex = displayRecent.findIndex(s => s.videoId === currentSong.videoId);
+    if (currentIndex !== -1) {
+      // Remove it from its current position
+      const [playingItem] = displayRecent.splice(currentIndex, 1);
+      // Put it at the front
+      displayRecent.unshift(playingItem);
+    } else {
+      // If not in recent list for some reason, add it to front
+      displayRecent.unshift(currentSong);
+    }
+  }
 
-  if (!recent.length) return null;
+  if (!displayRecent.length) return null;
 
   return (
-    <section>
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+    >
       <h2 className="text-white font-bold text-xl mb-4">Recently Played</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
-        {recent.slice(0, 8).map((song, i) => {
-          const isActive = currentSong?.videoId === song.videoId;
-          return (
-            <button
-              key={song.videoId || i}
-              onClick={() => playSong(song, recent.slice(i + 1))}
-              className={`liquid-glass-card flex items-center gap-3 rounded-md overflow-hidden group h-14 md:h-16
-                         ${isActive ? 'liquid-glass-card-active' : ''}`}
-            >
-              {/* Image */}
-              <img
-                src={song.thumbnail}
-                alt={song.title}
-                className="h-full aspect-square object-cover flex-shrink-0"
-                onError={e => {
-                  const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
-                  if (ytFallback && e.target.src !== ytFallback) {
-                    e.target.src = ytFallback;
-                  } else {
-                    e.target.onerror = null;
-                    e.target.src = '/logo.svg';
-                  }
+      <div className="overflow-x-auto no-scrollbar -mx-4 px-4 pb-4 touch-pan-x snap-x snap-mandatory scroll-smooth">
+        <div className="grid grid-rows-3 grid-flow-col gap-3 w-max">
+          {displayRecent.slice(0, 24).map((song, i) => {
+            const isActive = currentSong?.videoId === song.videoId;
+            return (
+              <motion.button
+                key={song.videoId || i}
+                layout
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ 
+                  opacity: { duration: 0.4, delay: i * 0.02 },
+                  x: { duration: 0.4, delay: i * 0.02 },
+                  layout: { duration: 0.3 }
                 }}
-              />
+                whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => playSong(song, displayRecent.slice(i + 1))}
+                className={`liquid-glass-card flex items-center gap-3 rounded-md overflow-hidden group h-14 md:h-16
+                           w-[220px] md:w-[280px] snap-start
+                           ${isActive ? 'liquid-glass-card-active' : ''}`}
+              >
+                {/* Image */}
+                <img
+                  src={song.thumbnail}
+                  alt={song.title}
+                  className="h-full aspect-square object-cover flex-shrink-0"
+                  onError={e => {
+                    const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
+                    if (ytFallback && e.target.src !== ytFallback) {
+                      e.target.src = ytFallback;
+                    } else {
+                      e.target.onerror = null;
+                      e.target.src = '/logo.svg';
+                    }
+                  }}
+                />
 
-              {/* Title */}
-              <div className="flex-1 min-w-0 pr-3">
-                <p className={`text-sm font-semibold truncate
-                  ${isActive && isPlaying ? 'playing-title-shimmer' : isActive ? 'text-[#dbeafe]' : 'text-white'}`}
-                  data-text={song.title}
-                >
-                  {song.title}
-                </p>
-              </div>
-
-              {/* Playing indicator */}
-              {isActive && isPlaying && (
-                <div className="flex gap-0.5 items-end h-4 mr-3 flex-shrink-0">
-                  {[0, 1, 2].map(j => (
-                    <div
-                      key={j}
-                      className="w-0.5 bg-[#FCFFF9] rounded-full animate-bounce"
-                      style={{
-                        height: `${(j + 1) * 4 + 2}px`,
-                        animationDelay: `${j * 0.15}s`,
-                      }}
-                    />
-                  ))}
+                {/* Title */}
+                <div className="flex-1 min-w-0 pr-3">
+                  <p className={`text-sm font-semibold truncate
+                    ${isActive && isPlaying ? 'playing-title-shimmer' : isActive ? 'text-[#dbeafe]' : 'text-white'}`}
+                    data-text={song.title}
+                  >
+                    {song.title}
+                  </p>
                 </div>
-              )}
-            </button>
-          );
-        })}
+
+                {/* Playing indicator */}
+                {isActive && isPlaying && (
+                  <div className="flex gap-0.5 items-end h-4 mr-3 flex-shrink-0">
+                    {[0, 1, 2].map(j => (
+                      <div
+                        key={j}
+                        className="w-0.5 bg-[#FCFFF9] rounded-full animate-bounce"
+                        style={{
+                          height: `${(j + 1) * 4 + 2}px`,
+                          animationDelay: `${j * 0.15}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
       </div>
-    </section>
+    </motion.section>
   );
 }
