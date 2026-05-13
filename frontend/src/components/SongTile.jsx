@@ -1,6 +1,6 @@
-import usePlayerStore    from '../store/usePlayerStore';
-import usePlaylistStore  from '../store/usePlaylistStore';
-import { useState }      from 'react';
+import usePlayerStore from '../store/usePlayerStore';
+import usePlaylistStore from '../store/usePlaylistStore';
+import { useState } from 'react';
 
 function fmt(s) {
   if (!s) return '';
@@ -9,12 +9,12 @@ function fmt(s) {
 }
 
 export default function SongTile({ song, queue = [], compact = false }) {
-  const playSong      = usePlayerStore(s => s.playSong);
-  const addToQueue    = usePlayerStore(s => s.addToQueue);
-  const currentSong   = usePlayerStore(s => s.currentSong);
-  const isPlaying     = usePlayerStore(s => s.isPlaying);
-  const playlists     = usePlaylistStore(s => s.playlists);
-  const addSong       = usePlaylistStore(s => s.addSong);
+  const playSong = usePlayerStore(s => s.playSong);
+  const addToQueue = usePlayerStore(s => s.addToQueue);
+  const currentSong = usePlayerStore(s => s.currentSong);
+  const isPlaying = usePlayerStore(s => s.isPlaying);
+  const playlists = usePlaylistStore(s => s.playlists);
+  const addSong = usePlaylistStore(s => s.addSong);
   const [menu, setMenu] = useState(false);
 
   const isActive = currentSong?.videoId === song.videoId;
@@ -30,7 +30,15 @@ export default function SongTile({ song, queue = [], compact = false }) {
           src={song.thumbnail}
           alt={song.title}
           className={`${compact ? 'w-10 h-10' : 'w-12 h-12'} rounded object-cover`}
-          onError={e => { e.target.src = '/logo.svg'; }}
+          onError={(e) => {
+            const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
+            if (ytFallback && e.target.src !== ytFallback) {
+              e.target.src = ytFallback;
+            } else {
+              e.target.onerror = null;
+              e.target.src = '/logo.svg';
+            }
+          }}
         />
         {isActive && isPlaying && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">
@@ -68,7 +76,7 @@ export default function SongTile({ song, queue = [], compact = false }) {
           type="button"
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
           </svg>
         </button>
         {menu && (

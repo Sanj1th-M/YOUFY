@@ -55,10 +55,14 @@ function RecommendedSkeleton() {
 
 // ─── Song Card ───────────────────────────────────────────────
 function RecommendedCard({ song, onPlay }) {
-  const [imgError, setImgError] = useState(false);
   const currentSong = usePlayerStore((s) => s.currentSong);
   const isPlaying   = usePlayerStore((s) => s.isPlaying);
   const isActive    = currentSong?.videoId === song.videoId;
+
+  // Prefer i.ytimg.com (reliable) over ytmusic CDN thumbnails
+  const primaryThumb = song.videoId
+    ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`
+    : (song.thumbnail || '/logo.svg');
 
   return (
     <button
@@ -71,11 +75,14 @@ function RecommendedCard({ song, onPlay }) {
       {/* Album Art */}
       <div className="relative mb-3">
         <img
-          src={imgError ? '/logo.svg' : (song.thumbnail || '/logo.svg')}
+          src={primaryThumb}
           alt={song.title}
           className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
           loading="lazy"
-          onError={() => setImgError(true)}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = '/logo.svg';
+          }}
         />
         {/* Bluish-white play button — hover reveal */}
         <div

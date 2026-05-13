@@ -487,14 +487,17 @@ function getBestThumbnail(thumbnails, fallback = '') {
 
 function normalizeSong(s) {
   if (!s) return null;
+  const videoId = s.videoId || '';
+  // Prefer reliable YouTube CDN thumbnail over ytmusic CDN
+  const ytThumb = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
   return {
-    videoId:         s.videoId || '',
+    videoId,
     title:           s.name || s.title || 'Unknown',
     artist:          (typeof s.artist === 'string' ? s.artist : s.artist?.name)
                   || (Array.isArray(s.artists) ? s.artists[0]?.name : null)
                   || s.author?.name
                   || 'Unknown',
-    thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
+    thumbnail:       ytThumb || getBestThumbnail(s.thumbnails) || s.thumbnail || '',
     durationSeconds: s.duration || s.durationSeconds || 0,
     album:           (typeof s.album === 'string' ? s.album : s.album?.name) || '',
   };

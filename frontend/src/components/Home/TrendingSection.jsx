@@ -1,13 +1,20 @@
 import usePlayerStore from '../../store/usePlayerStore';
 
+// Reliable YouTube thumbnail via i.ytimg.com (works for any videoId)
+function getYtThumbnail(videoId) {
+  if (!videoId) return '';
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
 // Pick highest quality thumbnail from YouTube Music API results
+// Preserves the -l90-rj suffix that Google's CDN requires for proper serving
 function getBestThumbnail(thumbnails, fallback = '') {
   if (!thumbnails || !thumbnails.length) return fallback;
   const url = thumbnails[thumbnails.length - 1]?.url || fallback;
   if (!url) return fallback;
   return url
-    .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')
-    .replace(/=s\d+/, '=s1280');
+    .replace(/=w\d+-h\d+/, '=w544-h544')
+    .replace(/=s\d+/, '=s544');
 }
 
 // Normalize ytmusic-api shape → Song model
@@ -16,7 +23,7 @@ function norm(s) {
     videoId:         s.videoId,
     title:           s.name || s.title || 'Unknown',
     artist:          s.artist?.name || s.artists?.[0]?.name || 'Unknown',
-    thumbnail:       getBestThumbnail(s.thumbnails) || '',
+    thumbnail:       getYtThumbnail(s.videoId) || getBestThumbnail(s.thumbnails) || '',
     durationSeconds: s.duration || 0,
     album:           s.album?.name || '',
   };
@@ -50,7 +57,15 @@ export function TrendingSection({ sections }) {
                 src={song.thumbnail}
                 alt={song.title}
                 className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
-                onError={e => { e.target.src = '/logo.svg'; }}
+                onError={e => {
+                  const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
+                  if (ytFallback && e.target.src !== ytFallback) {
+                    e.target.src = ytFallback;
+                  } else {
+                    e.target.onerror = null;
+                    e.target.src = '/logo.svg';
+                  }
+                }}
               />
               {/* Bluish-white play button — desktop hover only */}
               <div className="absolute bottom-2 right-2 w-10 h-10 bg-[#FCFFF9] rounded-full
@@ -104,7 +119,15 @@ export function RecentlyPlayed() {
                 src={song.thumbnail}
                 alt={song.title}
                 className="h-full aspect-square object-cover flex-shrink-0"
-                onError={e => { e.target.src = '/logo.svg'; }}
+                onError={e => {
+                  const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
+                  if (ytFallback && e.target.src !== ytFallback) {
+                    e.target.src = ytFallback;
+                  } else {
+                    e.target.onerror = null;
+                    e.target.src = '/logo.svg';
+                  }
+                }}
               />
 
               {/* Title */}
