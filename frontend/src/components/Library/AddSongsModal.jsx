@@ -2,19 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import usePlaylistStore from '../../store/usePlaylistStore';
 import { searchMusic } from '../../services/api';
 import usePlayerStore from '../../store/usePlayerStore';
+import ArtworkImage from '../ArtworkImage';
 import { getPlaylistArtworkSources } from './PlaylistArtwork';
-
-function getBestThumbnail(thumbnails, fallback = '') {
-  if (!thumbnails || !thumbnails.length) return fallback;
-  const url = thumbnails[thumbnails.length - 1]?.url || fallback;
-  if (!url) return fallback;
-  const normalized = String(url).replace(/^http:\/\//, 'https://');
-
-  // IMPORTANT: preserve extra params like "-l90-rj" which some hosts require.
-  return normalized
-    .replace(/=w\d+-h\d+/, '=w512-h512')
-    .replace(/=s\d+/, '=s512');
-}
+import { getBestThumbnail } from '../../utils/artwork';
 
 function normalizeSong(s) {
   return {
@@ -22,6 +12,7 @@ function normalizeSong(s) {
     title: s.name || s.title || 'Unknown',
     artist: s.artist?.name || s.artists?.[0]?.name || 'Unknown',
     thumbnail: getBestThumbnail(s.thumbnails) || s.thumbnail || '',
+    thumbnails: Array.isArray(s.thumbnails) ? s.thumbnails : [],
     durationSeconds: s.duration || 0,
     album: s.album?.name || '',
   };
@@ -118,14 +109,11 @@ export default function AddSongsModal({ playlist, onClose }) {
         <div className="p-4 border-b border-white/5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-subtle">
-              <img
+              <ArtworkImage
                 src={coverThumb}
                 alt=""
                 className="w-full h-full object-cover"
                 loading="lazy"
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-                onError={e => { e.target.src = '/logo.svg'; }}
               />
             </div>
 
@@ -201,14 +189,13 @@ export default function AddSongsModal({ playlist, onClose }) {
                         ${isActive ? 'bg-white/5' : ''}`}
                     >
                       <div className="relative w-11 h-11 rounded overflow-hidden flex-shrink-0 bg-subtle">
-                        <img
+                        <ArtworkImage
+                          item={song}
                           src={song.thumbnail || '/logo.svg'}
                           alt={song.title}
                           className="w-full h-full object-cover"
                           loading="lazy"
-                          referrerPolicy="no-referrer"
-                          crossOrigin="anonymous"
-                          onError={e => { e.target.src = '/logo.svg'; }}
+                          size={226}
                         />
                         <button
                           type="button"

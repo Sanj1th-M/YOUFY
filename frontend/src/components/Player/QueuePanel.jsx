@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ArtworkImage from '../ArtworkImage';
 import usePlayerStore from '../../store/usePlayerStore';
 import usePlaylistStore from '../../store/usePlaylistStore';
 import { isSystemLikedPlaylist } from '../../utils/playlists';
@@ -214,14 +215,12 @@ export default function QueuePanel({ onClose }) {
                   onClick={() => playFromQueueIndex(idx)}
                   aria-label={`Play ${song?.title || 'song'}`}
                 >
-                  <img
+                  <ArtworkImage
+                    item={song}
                     src={song?.thumbnail || '/logo.svg'}
                     alt={song?.title || 'Song'}
                     className="w-10 h-10 rounded object-cover flex-shrink-0"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/logo.svg';
-                    }}
+                    size={160}
                   />
                   <div className="min-w-0">
                     <p className="text-sm text-white font-medium truncate">{song?.title || 'Unknown'}</p>

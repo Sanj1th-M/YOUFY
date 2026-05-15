@@ -21,7 +21,8 @@ export default function Sidebar({
       id="sidebar"
       className={`hidden md:flex md:flex-col md:fixed md:top-0 md:left-0
                   md:h-screen overflow-hidden ${desktopWidthClass}
-                  ${hasDesktopPlayer ? 'md:pb-[90px]' : 'md:pb-0'} box-border bg-black z-30`}
+                  ${hasDesktopPlayer ? 'md:pb-[90px]' : 'md:pb-0'} box-border 
+                  bg-black/40 backdrop-blur-md border-r border-white/5 z-30`}
       style={{ transition: 'width 0.2s ease' }}
     >
       {/* Brand */}

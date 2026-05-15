@@ -5,6 +5,7 @@ import BottomNavBar  from './BottomBar';
 import MiniPlayer    from '../Player/MiniPlayer';
 import DesktopPlayer from '../Player/DesktopPlayer';
 import FullPlayer    from '../Player/FullPlayer';
+import { FallingPattern } from './FallingPattern';
 import usePlayerStore from '../../store/usePlayerStore';
 
 export default function AppLayout() {
@@ -14,7 +15,12 @@ export default function AppLayout() {
   const desktopSidebarOffsetClass = isSidebarExpanded ? 'md:ml-[240px]' : 'md:ml-[84px]';
 
   return (
-    <div className="flex h-screen w-full bg-black overflow-hidden">
+    <div className="relative flex h-screen w-full bg-black overflow-hidden isolate">
+      {/* Global Background Animation */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <FallingPattern className="opacity-40" />
+      </div>
+
       {/* Desktop sidebar — fixed left, hidden on mobile */}
       <Sidebar
         hasDesktopPlayer={!!currentSong}

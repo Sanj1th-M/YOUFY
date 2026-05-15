@@ -1,6 +1,7 @@
 import usePlayerStore from '../store/usePlayerStore';
 import usePlaylistStore from '../store/usePlaylistStore';
 import { useState } from 'react';
+import ArtworkImage from './ArtworkImage';
 
 function fmt(s) {
   if (!s) return '';
@@ -26,14 +27,12 @@ export default function SongTile({ song, queue = [], compact = false }) {
     >
       {/* Thumbnail */}
       <div className="relative flex-shrink-0" onClick={() => playSong(song, queue)}>
-        <img
+        <ArtworkImage
+          item={song}
           src={song.thumbnail}
           alt={song.title}
+          size={compact ? 160 : 226}
           className={`${compact ? 'w-10 h-10' : 'w-12 h-12'} rounded object-cover`}
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = '/logo.svg';
-          }}
         />
         {isActive && isPlaying && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">

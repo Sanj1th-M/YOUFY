@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import ArtworkImage from '../ArtworkImage';
 import usePlayerStore from '../../store/usePlayerStore';
 import AnimatedLikeButton from './AnimatedLikeButton';
 
@@ -38,14 +39,12 @@ export default function MiniPlayer() {
           className="flex-shrink-0"
           aria-label="Open full player"
         >
-          <img
+          <ArtworkImage
+            item={currentSong}
             src={currentSong.thumbnail || '/logo.svg'}
             alt={currentSong.title}
             className="w-10 h-10 rounded object-cover"
-            onError={e => {
-              e.target.onerror = null;
-              e.target.src = '/logo.svg';
-            }}
+            size={160}
           />
         </button>
 

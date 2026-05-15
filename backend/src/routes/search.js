@@ -29,9 +29,32 @@ function sanitizeThumbnailUrl(url) {
   }
 }
 
-function sanitizeThumbnails(item) {
+function safeText(value, maxLen = 200) {
+  return sanitizeString(typeof value === 'string' ? value : '', maxLen);
+}
+
+const VIDEO_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
+
+function buildVideoThumbnail(videoId) {
+  return VIDEO_ID_REGEX.test(videoId || '')
+    ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+    : '';
+}
+
+function sanitizeArtistRef(artist) {
+  if (!artist || typeof artist !== 'object') {
+    return { name: safeText(artist), artistId: '' };
+  }
+
+  return {
+    name:     safeText(artist.name),
+    artistId: safeText(artist.artistId || artist.browseId, 80),
+  };
+}
+
+function sanitizeThumbnails(item, fallbackThumbnails = []) {
   if (Array.isArray(item?.thumbnails)) {
-    return item.thumbnails
+    const thumbnails = item.thumbnails
       .map((thumbnail) => {
         const url = sanitizeThumbnailUrl(thumbnail?.url);
         if (!url) return null;
@@ -43,6 +66,8 @@ function sanitizeThumbnails(item) {
         };
       })
       .filter(Boolean);
+
+    if (thumbnails.length) return thumbnails;
   }
 
   if (typeof item?.thumbnail === 'object' && item.thumbnail?.url) {
@@ -50,28 +75,41 @@ function sanitizeThumbnails(item) {
     return url ? [{ url }] : [];
   }
 
-  return [];
+  if (!Array.isArray(fallbackThumbnails)) return [];
+
+  return fallbackThumbnails
+    .map((thumbnail) => {
+      const url = sanitizeThumbnailUrl(thumbnail?.url);
+      if (!url) return null;
+
+      return {
+        url,
+        width: Number.isFinite(Number(thumbnail?.width)) ? Number(thumbnail.width) : undefined,
+        height: Number.isFinite(Number(thumbnail?.height)) ? Number(thumbnail.height) : undefined,
+      };
+    })
+    .filter(Boolean);
 }
 
-function pickThumbnail(item) {
+function pickThumbnail(item, fallbackThumbnails = []) {
   // Prefer the square YouTube Music artwork array. This matches the original
   // frontend path that chose getBestThumbnail(item.thumbnails) before fallback.
-  const thumbnails = sanitizeThumbnails(item);
+  const thumbnails = sanitizeThumbnails(item, fallbackThumbnails);
   if (thumbnails.length) return thumbnails[thumbnails.length - 1].url;
   if (typeof item.thumbnail === 'string') return sanitizeThumbnailUrl(item.thumbnail);
-  return '';
+  return buildVideoThumbnail(item.videoId);
 }
 
-function sanitizeSong(item) {
+function sanitizeSong(item, fallbackThumbnails = []) {
   if (!item || typeof item !== 'object') return null;
   return {
-    videoId:    item.videoId || '',
-    name:       item.name || item.title || '',
-    artist:     (item.artist && typeof item.artist === 'object' ? item.artist.name : item.artist) || '',
-    album:      (item.album && typeof item.album === 'object' ? item.album.name : item.album) || '',
+    videoId:    VIDEO_ID_REGEX.test(item.videoId || '') ? item.videoId : '',
+    name:       safeText(item.name || item.title),
+    artist:     safeText((item.artist && typeof item.artist === 'object' ? item.artist.name : item.artist) || ''),
+    album:      safeText((item.album && typeof item.album === 'object' ? item.album.name : item.album) || ''),
     duration:   item.duration || 0,
-    thumbnails: sanitizeThumbnails(item),
-    thumbnail:  pickThumbnail(item),
+    thumbnails: sanitizeThumbnails(item, fallbackThumbnails),
+    thumbnail:  pickThumbnail(item, fallbackThumbnails),
   };
 }
 

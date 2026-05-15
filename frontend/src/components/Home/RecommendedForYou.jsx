@@ -10,6 +10,7 @@
 import { Component } from 'react';
 import useRecommendations from '../../hooks/useRecommendations';
 import usePlayerStore from '../../store/usePlayerStore';
+import ArtworkImage from '../ArtworkImage';
 
 // ─── Error Boundary ──────────────────────────────────────────
 class RecommendationErrorBoundary extends Component {
@@ -71,15 +72,12 @@ function RecommendedCard({ song, onPlay }) {
     >
       {/* Album Art */}
       <div className="relative mb-3">
-        <img
+        <ArtworkImage
+          item={song}
           src={primaryThumb}
           alt={song.title}
           className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
           loading="lazy"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = '/logo.svg';
-          }}
         />
         {/* Bluish-white play button — hover reveal */}
         <div

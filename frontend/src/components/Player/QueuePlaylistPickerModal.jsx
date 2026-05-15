@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import ArtworkImage from '../ArtworkImage';
 
 export default function QueuePlaylistPickerModal({
   song,
@@ -36,11 +37,12 @@ export default function QueuePlaylistPickerModal({
             <div className="min-w-0 flex-1">
               <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Add To Playlist</p>
               <div className="mt-4 flex items-center gap-3">
-                <img
-                  src={song?.thumbnail || '/logo-dark.png'}
+                <ArtworkImage
+                  item={song}
+                  src={song?.thumbnail || '/logo.svg'}
                   alt={song?.title || 'Song'}
                   className="h-12 w-12 rounded-2xl object-cover"
-                  onError={(event) => { event.target.src = '/logo-dark.png'; }}
+                  size={226}
                 />
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold text-white">{song?.title || 'Unknown title'}</p>

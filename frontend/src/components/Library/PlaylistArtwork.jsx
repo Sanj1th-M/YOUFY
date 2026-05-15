@@ -1,9 +1,6 @@
 import { isSystemLikedPlaylist } from '../../utils/playlists';
-
-function getBestThumbnail(thumbnails, fallback = '') {
-  if (!Array.isArray(thumbnails) || thumbnails.length === 0) return fallback;
-  return thumbnails[thumbnails.length - 1]?.url || fallback;
-}
+import ArtworkImage from '../ArtworkImage';
+import { getArtworkSources, getBestThumbnail } from '../../utils/artwork';
 
 export function getPlaylistArtworkSources(playlist, songs = []) {
   if (isSystemLikedPlaylist(playlist)) {
@@ -12,11 +9,11 @@ export function getPlaylistArtworkSources(playlist, songs = []) {
 
   const playlistImage = getBestThumbnail(playlist?.thumbnails) || playlist?.thumbnail || '';
   if (playlistImage) {
-    return [playlistImage];
+    return getArtworkSources(playlist, { fallback: playlistImage, size: 512 });
   }
 
   const songImages = songs
-    .map(song => song?.thumbnail || '')
+    .flatMap(song => getArtworkSources(song, { size: 512 }))
     .filter(Boolean);
 
   if (songImages.length > 0) {
@@ -37,11 +34,12 @@ export default function PlaylistArtwork({
   if (isLikedSongs) {
     return (
       <div className={`overflow-hidden bg-[#101010] ${className}`}>
-        <img
+        <ArtworkImage
           src="/liked-heart.png"
           alt=""
           className={`h-full w-full object-cover ${imageClassName}`}
           loading="lazy"
+          fallbackSrc="/liked-heart.png"
         />
       </div>
     );
@@ -53,16 +51,12 @@ export default function PlaylistArtwork({
     const source = artworkSources[0] || '/logo.svg';
     return (
       <div className={`overflow-hidden bg-[#111111] ${className}`}>
-        <img
+        <ArtworkImage
+          sources={artworkSources}
           src={source}
           alt=""
           className={`h-full w-full object-cover ${imageClassName}`}
           loading="lazy"
-          referrerPolicy="no-referrer"
-          crossOrigin="anonymous"
-          onError={(event) => {
-            event.currentTarget.src = '/logo.svg';
-          }}
         />
       </div>
     );
@@ -74,17 +68,13 @@ export default function PlaylistArtwork({
         const source = artworkSources[index];
 
         return source ? (
-          <img
+          <ArtworkImage
             key={source + index}
+            sources={[source]}
             src={source}
             alt=""
             className={`h-full w-full object-cover ${imageClassName}`}
             loading="lazy"
-            referrerPolicy="no-referrer"
-            crossOrigin="anonymous"
-            onError={(event) => {
-              event.currentTarget.src = '/logo.svg';
-            }}
           />
         ) : (
           <div

@@ -1,10 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Unicase:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
+:root {
+  --primary: #FCFFF9;
+  --background: #000000;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --primary: 90 40% 98%;
+    /* ... other variables as needed */
+  }
+
   * { box-sizing: border-box; }
   html, body, #root {
     height: 100%;

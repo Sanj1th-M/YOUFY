@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AddSongsModal from '../components/Library/AddSongsModal';
+import ArtworkImage from '../components/ArtworkImage';
 import PlaylistArtwork, { getPlaylistArtworkSources } from '../components/Library/PlaylistArtwork';
 import PlaylistEditModal from '../components/Library/PlaylistEditModal';
 import SavePlaylistModal from '../components/Library/SavePlaylistModal';
@@ -8,15 +9,7 @@ import { getPlaylistSongs } from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 import usePlayerStore from '../store/usePlayerStore';
 import usePlaylistStore from '../store/usePlaylistStore';
-
-function getBestThumbnail(thumbnails, fallback = '') {
-  if (!Array.isArray(thumbnails) || thumbnails.length === 0) return fallback;
-  const url = thumbnails[thumbnails.length - 1]?.url || fallback;
-  if (!url) return fallback;
-  return url
-    .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')
-    .replace(/=s\d+/, '=s1280');
-}
+import { getBestThumbnail } from '../utils/artwork';
 
 function normalizeSong(song) {
   if (!song) return null;
@@ -30,6 +23,7 @@ function normalizeSong(song) {
       || song.author?.name
       || 'Unknown',
     thumbnail: getBestThumbnail(song.thumbnails) || song.thumbnail || '',
+    thumbnails: Array.isArray(song.thumbnails) ? song.thumbnails : [],
     durationSeconds: song.duration || song.durationSeconds || 0,
     album: (typeof song.album === 'string' ? song.album : song.album?.name) || '',
   };
@@ -226,16 +220,13 @@ function PlaylistTrackRow({ song, index, queue, canRemove = false, onRemove }) {
         className="relative h-14 w-14 overflow-hidden rounded-2xl bg-white/5"
         aria-label={`Open ${song.title}`}
       >
-        <img
+        <ArtworkImage
+          item={song}
           src={song.thumbnail || '/logo.svg'}
           alt=""
           className="h-full w-full object-cover"
           loading="lazy"
-          referrerPolicy="no-referrer"
-          crossOrigin="anonymous"
-          onError={(event) => {
-            event.currentTarget.src = '/logo.svg';
-          }}
+          size={226}
         />
       </button>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ArtworkImage from '../ArtworkImage';
 import usePlayerStore from '../../store/usePlayerStore';
 import ProgressBar from './ProgressBar';
 import QueuePanel from './QueuePanel';
@@ -45,7 +46,7 @@ export default function DesktopPlayer() {
       <div
         id="desktop-player"
         className="hidden md:flex fixed bottom-0 left-0 right-0 h-[90px] z-50
-                   bg-black border-t border-white/5 px-4 items-center"
+                   bg-black/60 backdrop-blur-xl border-t border-white/5 px-4 items-center"
       >
       {/* ── Left: Track Info ── */}
       <div className="flex items-center gap-3 w-[30%] min-w-0">
@@ -55,14 +56,12 @@ export default function DesktopPlayer() {
           className="flex-shrink-0 rounded transition hover:opacity-80"
           aria-label="Open full player"
         >
-          <img
+          <ArtworkImage
+            item={currentSong}
             src={currentSong.thumbnail || '/logo.svg'}
             alt={currentSong.title}
             className="w-14 h-14 rounded object-cover"
-            onError={e => {
-              e.target.onerror = null;
-              e.target.src = '/logo.svg';
-            }}
+            size={226}
           />
         </button>
         <div className="min-w-0">

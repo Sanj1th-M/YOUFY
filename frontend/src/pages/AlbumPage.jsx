@@ -1,18 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getAlbumSongs } from '../services/api';
+import ArtworkImage from '../components/ArtworkImage';
 import SongTile from '../components/SongTile';
 import usePlayerStore from '../store/usePlayerStore';
-
-// Pick highest quality thumbnail
-function getBestThumbnail(thumbnails, fallback = '') {
-  if (!thumbnails || !thumbnails.length) return fallback;
-  const url = thumbnails[thumbnails.length - 1]?.url || fallback;
-  if (!url) return fallback;
-  return url
-    .replace(/=w\d+-h\d+(-[^&]+)?/, '=w1280-h1280')
-    .replace(/=s\d+/, '=s1280');
-}
+import { getBestThumbnail } from '../utils/artwork';
 
 // Normalize ytmusic-api song → app Song shape
 function normalizeSong(s) {
@@ -25,6 +17,7 @@ function normalizeSong(s) {
                   || s.author?.name
                   || 'Unknown',
     thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
+    thumbnails:      Array.isArray(s.thumbnails) ? s.thumbnails : [],
     durationSeconds: s.duration || s.durationSeconds || 0,
     album:           s.album?.name || s.album || '',
   };
@@ -159,12 +152,13 @@ export default function AlbumPage() {
 
       {/* Album header */}
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8">
-        <img
+        <ArtworkImage
+          item={album}
           src={thumbnail}
           alt={albumName}
+          size={1280}
           className="w-40 h-40 md:w-56 md:h-56 rounded-lg object-cover shadow-2xl
                      shadow-black/60 flex-shrink-0"
-          onError={e => { e.target.src = '/logo.svg'; }}
         />
 
         <div className="flex-1 min-w-0 text-center sm:text-left sm:pt-4">

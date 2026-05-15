@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ArtworkImage from '../ArtworkImage';
 import SongTile from '../SongTile';
 import usePlayerStore from '../../store/usePlayerStore';
 import { getArtistSongs } from '../../services/api';
+import { getBestThumbnail } from '../../utils/artwork';
 
 export default function SearchResultTile({ results }) {
   const playSong = usePlayerStore(s => s.playSong);
@@ -104,7 +106,8 @@ export default function SearchResultTile({ results }) {
 
       setArtistPage({
         name:      data?.name      || artist?.name || 'Artist',
-        thumbnail: getBestThumbnail(data?.thumbnails || artist?.thumbnails) || '/logo.svg',
+        thumbnail: getBestThumbnail(data?.thumbnails || artist?.thumbnails) || artist?.thumbnail || '/logo.svg',
+        thumbnails: Array.isArray(data?.thumbnails) ? data.thumbnails : (artist?.thumbnails || []),
         topSongs,
         albums:    rawAlbums,
         singles:   rawSingles,
@@ -138,11 +141,11 @@ export default function SearchResultTile({ results }) {
 
         {/* Artist header */}
         <div className="flex items-center gap-5 mb-8">
-          <img
+          <ArtworkImage
+            item={artistPage}
             src={artistPage.thumbnail}
             alt={artistPage.name}
             className="w-24 h-24 rounded-full object-cover flex-shrink-0 shadow-lg"
-            onError={e => { e.target.src = '/logo.svg'; }}
           />
           <div className="min-w-0">
             <h1 className="text-white text-2xl font-bold truncate">{artistPage.name}</h1>
@@ -200,11 +203,11 @@ export default function SearchResultTile({ results }) {
                       albumId ? 'hover:bg-subtle cursor-pointer' : 'opacity-60 cursor-not-allowed',
                     ].join(' ')}
                   >
-                    <img
+                    <ArtworkImage
+                      item={album}
                       src={getBestThumbnail(album?.thumbnails) || '/logo.svg'}
                       alt={album?.name || 'Album'}
                       className="w-full aspect-square object-cover rounded-lg mb-2"
-                      onError={e => { e.target.src = '/logo.svg'; }}
                     />
                     <p className="text-white text-sm font-medium truncate">
                       {album?.name || 'Unknown'}
@@ -236,11 +239,11 @@ export default function SearchResultTile({ results }) {
                       singleId ? 'hover:bg-subtle cursor-pointer' : 'opacity-60 cursor-not-allowed',
                     ].join(' ')}
                   >
-                    <img
+                    <ArtworkImage
+                      item={single}
                       src={getBestThumbnail(single?.thumbnails) || '/logo.svg'}
                       alt={single?.name || 'Single'}
                       className="w-full aspect-square object-cover rounded-lg mb-2"
-                      onError={e => { e.target.src = '/logo.svg'; }}
                     />
                     <p className="text-white text-sm font-medium truncate">
                       {single?.name || 'Unknown'}
@@ -340,15 +343,13 @@ export default function SearchResultTile({ results }) {
                   ].join(' ')}
                 >
                   <div className="relative w-20 h-20">
-                    <img
+                    <ArtworkImage
+                      item={a}
                       src={getBestThumbnail(a?.thumbnails) || a?.thumbnail || '/logo.svg'}
                       alt={a?.name || 'Artist'}
                       className="w-20 h-20 rounded-full object-cover
                                  ring-2 ring-transparent hover:ring-primary transition-all"
                       loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
                       onError={handleArtworkError}
                     />
                     {isLoading && (
@@ -400,14 +401,12 @@ export default function SearchResultTile({ results }) {
                       : 'opacity-60 cursor-not-allowed',
                   ].join(' ')}
                 >
-                  <img
+                  <ArtworkImage
+                    item={album}
                     src={getBestThumbnail(album?.thumbnails) || album?.thumbnail || '/logo.svg'}
                     alt={album?.name || 'Album'}
                     className="w-full aspect-square object-cover rounded mb-2"
                     loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
                     onError={handleArtworkError}
                   />
                   <p className="text-white text-sm font-medium truncate">
@@ -447,14 +446,12 @@ export default function SearchResultTile({ results }) {
                       : 'opacity-60 cursor-not-allowed',
                   ].join(' ')}
                 >
-                  <img
+                  <ArtworkImage
+                    item={p}
                     src={getBestThumbnail(p?.thumbnails) || p?.thumbnail || '/logo.svg'}
                     alt={p?.name || 'Playlist'}
                     className="w-full aspect-square object-cover rounded mb-2"
                     loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
                     onError={handleArtworkError}
                   />
                   <p className="text-white text-sm font-medium truncate">
@@ -476,15 +473,6 @@ export default function SearchResultTile({ results }) {
 
 // ── Helpers ───────────────────────────────────────────────
 
-function getBestThumbnail(thumbnails, fallback = '') {
-  if (!thumbnails || !thumbnails.length) return fallback;
-  const url = thumbnails[thumbnails.length - 1]?.url || fallback;
-  if (!url) return fallback;
-  return url
-    .replace(/=w\d+-h\d+/, '=w512-h512')
-    .replace(/=s\d+/, '=s512');
-}
-
 function normalizeSong(s) {
   if (!s) return null;
   const videoId = s.videoId || '';
@@ -496,6 +484,7 @@ function normalizeSong(s) {
                   || s.author?.name
                   || 'Unknown',
     thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
+    thumbnails:      Array.isArray(s.thumbnails) ? s.thumbnails : [],
     durationSeconds: s.duration || s.durationSeconds || 0,
     album:           (typeof s.album === 'string' ? s.album : s.album?.name) || '',
   };

@@ -2,19 +2,10 @@ import usePlayerStore from '../../store/usePlayerStore';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { searchMusic } from '../../services/api';
+import ArtworkImage from '../ArtworkImage';
+import { getBestThumbnail } from '../../utils/artwork';
 
 const recentThumbnailRepairAttempts = new Set();
-
-// Pick highest quality thumbnail from YouTube Music API results
-// Preserves the -l90-rj suffix that Google's CDN requires for proper serving
-function getBestThumbnail(thumbnails, fallback = '') {
-  if (!thumbnails || !thumbnails.length) return fallback;
-  const url = thumbnails[thumbnails.length - 1]?.url || fallback;
-  if (!url) return fallback;
-  return url
-    .replace(/=w\d+-h\d+/, '=w544-h544')
-    .replace(/=s\d+/, '=s544');
-}
 
 function readRecentSongs() {
   try {
@@ -51,7 +42,8 @@ function norm(s) {
     videoId:         s.videoId,
     title:           s.name || s.title || 'Unknown',
     artist:          s.artist?.name || s.artists?.[0]?.name || 'Unknown',
-    thumbnail:       getBestThumbnail(s.thumbnails) || '',
+    thumbnail:       getBestThumbnail(s.thumbnails, '', 544) || s.thumbnail || '',
+    thumbnails:      Array.isArray(s.thumbnails) ? s.thumbnails : [],
     durationSeconds: s.duration || 0,
     album:           s.album?.name || '',
   };
@@ -81,14 +73,12 @@ export function TrendingSection({ sections }) {
           >
             {/* Album Art with hover play button */}
             <div className="relative mb-3">
-              <img
+              <ArtworkImage
+                item={song}
                 src={song.thumbnail}
                 alt={song.title}
+                size={544}
                 className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
-                onError={e => {
-                  e.target.onerror = null;
-                  e.target.src = '/logo.svg';
-                }}
               />
               {/* Bluish-white play button — desktop hover only */}
               <div className="absolute bottom-2 right-2 w-10 h-10 bg-[#FCFFF9] rounded-full
@@ -145,7 +135,7 @@ export function RecentlyPlayed() {
         const data = await searchMusic(query);
         const candidates = Array.isArray(data?.songs) ? data.songs : [];
         const match = candidates.find(candidate => candidate?.videoId === song.videoId);
-        const thumbnail = getBestThumbnail(match?.thumbnails) || match?.thumbnail || '';
+        const thumbnail = getBestThumbnail(match?.thumbnails, '', 544) || match?.thumbnail || '';
 
         return thumbnail && !isGeneratedVideoThumbnailUrl(thumbnail)
           ? { videoId: song.videoId, thumbnail }
@@ -223,14 +213,12 @@ export function RecentlyPlayed() {
                            ${isActive ? 'bg-subtle' : ''}`}
               >
                 {/* Image */}
-                <img
-                  src={hasGeneratedVideoThumbnail(song) ? '/logo.svg' : (song.thumbnail || '/logo.svg')}
+                <ArtworkImage
+                  item={song}
+                  src={song.thumbnail || '/logo.svg'}
                   alt={song.title}
+                  size={226}
                   className="h-full aspect-square object-cover flex-shrink-0"
-                  onError={e => {
-                    e.target.onerror = null;
-                    e.target.src = '/logo.svg';
-                  }}
                 />
 
                 {/* Title */}

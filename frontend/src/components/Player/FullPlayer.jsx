@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ArtworkImage from '../ArtworkImage';
 import usePlayerStore from '../../store/usePlayerStore';
 import usePlaylistStore from '../../store/usePlaylistStore';
 import { isSystemLikedPlaylist } from '../../utils/playlists';
@@ -629,16 +630,13 @@ export default function FullPlayer() {
 
   const renderQueueRowMain = useCallback((song) => (
     <>
-      <img
+      <ArtworkImage
+        item={song}
         src={song?.thumbnail || '/logo.svg'}
         alt={song?.title || 'Song'}
         className="h-14 w-14 rounded-xl object-cover"
         loading="lazy"
-        decoding="async"
-        onError={(event) => {
-          event.target.onerror = null;
-          event.target.src = '/logo.svg';
-        }}
+        size={226}
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-white">{song?.title || 'Unknown title'}</p>
@@ -786,11 +784,12 @@ export default function FullPlayer() {
           {/* Center: Player */}
           <div className="flex flex-1 flex-col items-center justify-center px-6 min-w-0">
             <div className="flex flex-1 items-center justify-center w-full min-h-0">
-              <img
+              <ArtworkImage
+                item={currentSong}
                 src={heroImage}
                 alt={currentSong.title}
                 className="aspect-square w-full max-w-[clamp(16rem,30vw,28rem)] rounded-[2rem] object-cover shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
-                onError={(event) => { event.target.src = '/logo.svg'; }}
+                size={1280}
               />
             </div>
 
@@ -902,11 +901,12 @@ export default function FullPlayer() {
             <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
               <div className="flex flex-1 flex-col">
                 <div className="flex flex-1 items-center justify-center pt-1">
-                  <img
+                  <ArtworkImage
+                    item={currentSong}
                     src={heroImage}
                     alt={currentSong.title}
                     className="aspect-square w-full max-w-[clamp(18rem,72vw,23rem)] rounded-[2rem] object-cover shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
-                    onError={(event) => { event.target.src = '/logo.svg'; }}
+                    size={1280}
                   />
                 </div>
 
