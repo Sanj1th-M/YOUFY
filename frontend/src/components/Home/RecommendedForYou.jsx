@@ -7,7 +7,7 @@
  * - Matches existing TrendingSection card design
  */
 
-import { Component, useState } from 'react';
+import { Component } from 'react';
 import useRecommendations from '../../hooks/useRecommendations';
 import usePlayerStore from '../../store/usePlayerStore';
 
@@ -59,10 +59,7 @@ function RecommendedCard({ song, onPlay }) {
   const isPlaying   = usePlayerStore((s) => s.isPlaying);
   const isActive    = currentSong?.videoId === song.videoId;
 
-  // Prefer i.ytimg.com (reliable) over ytmusic CDN thumbnails
-  const primaryThumb = song.videoId
-    ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`
-    : (song.thumbnail || '/logo.svg');
+  const primaryThumb = song.thumbnail || '/logo.svg';
 
   return (
     <button

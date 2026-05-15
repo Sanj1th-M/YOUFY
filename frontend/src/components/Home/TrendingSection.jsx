@@ -1,11 +1,9 @@
 import usePlayerStore from '../../store/usePlayerStore';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { searchMusic } from '../../services/api';
 
-// Reliable YouTube thumbnail via i.ytimg.com (works for any videoId)
-function getYtThumbnail(videoId) {
-  if (!videoId) return '';
-  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-}
+const recentThumbnailRepairAttempts = new Set();
 
 // Pick highest quality thumbnail from YouTube Music API results
 // Preserves the -l90-rj suffix that Google's CDN requires for proper serving
@@ -18,13 +16,42 @@ function getBestThumbnail(thumbnails, fallback = '') {
     .replace(/=s\d+/, '=s544');
 }
 
+function readRecentSongs() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('recentSongs') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function isGeneratedVideoThumbnailUrl(value) {
+  if (typeof value !== 'string') return false;
+
+  try {
+    const url = new URL(value);
+    const parts = url.pathname.split('/').filter(Boolean);
+    return url.protocol === 'https:'
+      && url.hostname === 'i.ytimg.com'
+      && parts.length === 3
+      && parts[0] === 'vi'
+      && parts[2] === 'hqdefault.jpg';
+  } catch {
+    return false;
+  }
+}
+
+function hasGeneratedVideoThumbnail(song) {
+  return isGeneratedVideoThumbnailUrl(song?.thumbnail);
+}
+
 // Normalize ytmusic-api shape → Song model
 function norm(s) {
   return {
     videoId:         s.videoId,
     title:           s.name || s.title || 'Unknown',
     artist:          s.artist?.name || s.artists?.[0]?.name || 'Unknown',
-    thumbnail:       getYtThumbnail(s.videoId) || getBestThumbnail(s.thumbnails) || '',
+    thumbnail:       getBestThumbnail(s.thumbnails) || '',
     durationSeconds: s.duration || 0,
     album:           s.album?.name || '',
   };
@@ -59,13 +86,8 @@ export function TrendingSection({ sections }) {
                 alt={song.title}
                 className="w-full aspect-square object-cover rounded-md shadow-lg shadow-black/40"
                 onError={e => {
-                  const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
-                  if (ytFallback && e.target.src !== ytFallback) {
-                    e.target.src = ytFallback;
-                  } else {
-                    e.target.onerror = null;
-                    e.target.src = '/logo.svg';
-                  }
+                  e.target.onerror = null;
+                  e.target.src = '/logo.svg';
                 }}
               />
               {/* Bluish-white play button — desktop hover only */}
@@ -98,9 +120,61 @@ export function RecentlyPlayed() {
   const playSong    = usePlayerStore(s => s.playSong);
   const currentSong = usePlayerStore(s => s.currentSong);
   const isPlaying   = usePlayerStore(s => s.isPlaying);
+  const [recentRepairVersion, setRecentRepairVersion] = useState(0);
   
   // Re-read recent songs whenever currentSong changes to ensure UI is fresh
-  const recentRaw = JSON.parse(localStorage.getItem('recentSongs') || '[]');
+  const recentRaw = readRecentSongs();
+
+  useEffect(() => {
+    const storedRecent = readRecentSongs();
+    const songsToRepair = storedRecent
+      .filter(song => song?.videoId && hasGeneratedVideoThumbnail(song))
+      .filter(song => !recentThumbnailRepairAttempts.has(song.videoId))
+      .slice(0, 6);
+
+    if (!songsToRepair.length) return undefined;
+
+    let cancelled = false;
+    songsToRepair.forEach(song => recentThumbnailRepairAttempts.add(song.videoId));
+
+    Promise.all(songsToRepair.map(async (song) => {
+      const query = [song.title, song.artist].filter(Boolean).join(' ');
+      if (!query) return null;
+
+      try {
+        const data = await searchMusic(query);
+        const candidates = Array.isArray(data?.songs) ? data.songs : [];
+        const match = candidates.find(candidate => candidate?.videoId === song.videoId);
+        const thumbnail = getBestThumbnail(match?.thumbnails) || match?.thumbnail || '';
+
+        return thumbnail && !isGeneratedVideoThumbnailUrl(thumbnail)
+          ? { videoId: song.videoId, thumbnail }
+          : null;
+      } catch {
+        return null;
+      }
+    })).then((repairs) => {
+      if (cancelled) return;
+      const repairMap = new Map(
+        repairs.filter(Boolean).map(repair => [repair.videoId, repair.thumbnail])
+      );
+      if (!repairMap.size) return;
+
+      const latestRecent = readRecentSongs();
+      const repairedRecent = latestRecent.map(song => (
+        repairMap.has(song?.videoId)
+          ? { ...song, thumbnail: repairMap.get(song.videoId) }
+          : song
+      ));
+
+      localStorage.setItem('recentSongs', JSON.stringify(repairedRecent));
+      setRecentRepairVersion(version => version + 1);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSong?.videoId, recentRepairVersion]);
   
   // Logic: Ensure currentSong is always first in the rendered list
   let displayRecent = [...recentRaw];
@@ -144,23 +218,18 @@ export function RecentlyPlayed() {
                 whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => playSong(song, displayRecent.slice(i + 1))}
-                className={`liquid-glass-card flex items-center gap-3 rounded-md overflow-hidden group h-14 md:h-16
+                className={`flex items-center gap-3 rounded-md overflow-hidden group h-14 md:h-16 transition-colors hover:bg-subtle
                            w-[220px] md:w-[280px] snap-start
-                           ${isActive ? 'liquid-glass-card-active' : ''}`}
+                           ${isActive ? 'bg-subtle' : ''}`}
               >
                 {/* Image */}
                 <img
-                  src={song.thumbnail}
+                  src={hasGeneratedVideoThumbnail(song) ? '/logo.svg' : (song.thumbnail || '/logo.svg')}
                   alt={song.title}
                   className="h-full aspect-square object-cover flex-shrink-0"
                   onError={e => {
-                    const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
-                    if (ytFallback && e.target.src !== ytFallback) {
-                      e.target.src = ytFallback;
-                    } else {
-                      e.target.onerror = null;
-                      e.target.src = '/logo.svg';
-                    }
+                    e.target.onerror = null;
+                    e.target.src = '/logo.svg';
                   }}
                 />
 

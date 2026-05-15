@@ -56,12 +56,13 @@ export default function DesktopPlayer() {
           aria-label="Open full player"
         >
           <img
-            src={currentSong.videoId
-              ? `https://i.ytimg.com/vi/${currentSong.videoId}/hqdefault.jpg`
-              : (currentSong.thumbnail || '/logo.svg')}
+            src={currentSong.thumbnail || '/logo.svg'}
             alt={currentSong.title}
             className="w-14 h-14 rounded object-cover"
-            onError={e => { e.target.onerror = null; e.target.src = '/logo.svg'; }}
+            onError={e => {
+              e.target.onerror = null;
+              e.target.src = '/logo.svg';
+            }}
           />
         </button>
         <div className="min-w-0">

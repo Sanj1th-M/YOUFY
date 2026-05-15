@@ -63,10 +63,7 @@ export default function FullPlayer() {
   const autoScrollFrameRef = useRef(null);
   const dragRenderFrameRef = useRef(null);
 
-  // Prefer reliable YouTube CDN thumbnail over ytmusic CDN
-  const heroImage = currentSong?.videoId
-    ? `https://i.ytimg.com/vi/${currentSong.videoId}/hqdefault.jpg`
-    : (currentSong?.thumbnail || '/logo.svg');
+  const heroImage = currentSong?.thumbnail || '/logo.svg';
   const regularPlaylists = useMemo(
     () => playlists.filter((playlist) => playlist?.id && !isSystemLikedPlaylist(playlist)),
     [playlists],
@@ -633,14 +630,15 @@ export default function FullPlayer() {
   const renderQueueRowMain = useCallback((song) => (
     <>
       <img
-        src={song?.videoId
-          ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`
-          : (song?.thumbnail || '/logo.svg')}
+        src={song?.thumbnail || '/logo.svg'}
         alt={song?.title || 'Song'}
         className="h-14 w-14 rounded-xl object-cover"
         loading="lazy"
         decoding="async"
-        onError={(event) => { event.target.onerror = null; event.target.src = '/logo.svg'; }}
+        onError={(event) => {
+          event.target.onerror = null;
+          event.target.src = '/logo.svg';
+        }}
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-white">{song?.title || 'Unknown title'}</p>

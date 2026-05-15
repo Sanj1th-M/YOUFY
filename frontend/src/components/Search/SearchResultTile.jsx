@@ -488,8 +488,6 @@ function getBestThumbnail(thumbnails, fallback = '') {
 function normalizeSong(s) {
   if (!s) return null;
   const videoId = s.videoId || '';
-  // Prefer reliable YouTube CDN thumbnail over ytmusic CDN
-  const ytThumb = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
   return {
     videoId,
     title:           s.name || s.title || 'Unknown',
@@ -497,7 +495,7 @@ function normalizeSong(s) {
                   || (Array.isArray(s.artists) ? s.artists[0]?.name : null)
                   || s.author?.name
                   || 'Unknown',
-    thumbnail:       ytThumb || getBestThumbnail(s.thumbnails) || s.thumbnail || '',
+    thumbnail:       getBestThumbnail(s.thumbnails) || s.thumbnail || '',
     durationSeconds: s.duration || s.durationSeconds || 0,
     album:           (typeof s.album === 'string' ? s.album : s.album?.name) || '',
   };

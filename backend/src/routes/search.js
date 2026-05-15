@@ -15,13 +15,50 @@ const r = Router();
 
 // ── Response sanitizers — whitelist only safe fields ──────────────
 
-function pickThumbnail(item) {
-  // ytmusic-api may return thumbnails as array of {url,width,height} or string
-  if (typeof item.thumbnail === 'string') return item.thumbnail;
-  if (Array.isArray(item.thumbnails) && item.thumbnails.length) {
-    return item.thumbnails[item.thumbnails.length - 1]?.url || '';
+function sanitizeThumbnailUrl(url) {
+  const cleanUrl = sanitizeString(url, 1000);
+  if (!cleanUrl) return '';
+
+  try {
+    const parsed = new URL(cleanUrl);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+      ? parsed.toString()
+      : '';
+  } catch {
+    return '';
   }
-  if (typeof item.thumbnail === 'object' && item.thumbnail?.url) return item.thumbnail.url;
+}
+
+function sanitizeThumbnails(item) {
+  if (Array.isArray(item?.thumbnails)) {
+    return item.thumbnails
+      .map((thumbnail) => {
+        const url = sanitizeThumbnailUrl(thumbnail?.url);
+        if (!url) return null;
+
+        return {
+          url,
+          width: Number.isFinite(Number(thumbnail?.width)) ? Number(thumbnail.width) : undefined,
+          height: Number.isFinite(Number(thumbnail?.height)) ? Number(thumbnail.height) : undefined,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof item?.thumbnail === 'object' && item.thumbnail?.url) {
+    const url = sanitizeThumbnailUrl(item.thumbnail.url);
+    return url ? [{ url }] : [];
+  }
+
+  return [];
+}
+
+function pickThumbnail(item) {
+  // Prefer the square YouTube Music artwork array. This matches the original
+  // frontend path that chose getBestThumbnail(item.thumbnails) before fallback.
+  const thumbnails = sanitizeThumbnails(item);
+  if (thumbnails.length) return thumbnails[thumbnails.length - 1].url;
+  if (typeof item.thumbnail === 'string') return sanitizeThumbnailUrl(item.thumbnail);
   return '';
 }
 
@@ -33,6 +70,7 @@ function sanitizeSong(item) {
     artist:     (item.artist && typeof item.artist === 'object' ? item.artist.name : item.artist) || '',
     album:      (item.album && typeof item.album === 'object' ? item.album.name : item.album) || '',
     duration:   item.duration || 0,
+    thumbnails: sanitizeThumbnails(item),
     thumbnail:  pickThumbnail(item),
   };
 }
@@ -44,6 +82,7 @@ function sanitizeAlbum(item) {
     name:       item.name || item.title || '',
     artist:     (item.artist && typeof item.artist === 'object' ? item.artist.name : item.artist) || '',
     year:       item.year || '',
+    thumbnails: sanitizeThumbnails(item),
     thumbnail:  pickThumbnail(item),
     type:       item.type || 'album',
   };
@@ -54,6 +93,7 @@ function sanitizeArtist(item) {
   return {
     artistId:   item.artistId || item.browseId || '',
     name:       item.name || '',
+    thumbnails: sanitizeThumbnails(item),
     thumbnail:  pickThumbnail(item),
   };
 }
@@ -64,6 +104,7 @@ function sanitizePlaylistItem(item) {
     playlistId: item.playlistId || item.browseId || '',
     name:       item.name || item.title || '',
     artist:     (item.artist && typeof item.artist === 'object' ? item.artist.name : item.artist) || '',
+    thumbnails: sanitizeThumbnails(item),
     thumbnail:  pickThumbnail(item),
   };
 }

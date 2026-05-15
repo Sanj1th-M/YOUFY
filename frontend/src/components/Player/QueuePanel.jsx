@@ -215,12 +215,13 @@ export default function QueuePanel({ onClose }) {
                   aria-label={`Play ${song?.title || 'song'}`}
                 >
                   <img
-                    src={song?.videoId
-                      ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`
-                      : (song?.thumbnail || '/logo.svg')}
+                    src={song?.thumbnail || '/logo.svg'}
                     alt={song?.title || 'Song'}
                     className="w-10 h-10 rounded object-cover flex-shrink-0"
-                    onError={(e) => { e.target.onerror = null; e.target.src = '/logo.svg'; }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/logo.svg';
+                    }}
                   />
                   <div className="min-w-0">
                     <p className="text-sm text-white font-medium truncate">{song?.title || 'Unknown'}</p>

@@ -31,13 +31,8 @@ export default function SongTile({ song, queue = [], compact = false }) {
           alt={song.title}
           className={`${compact ? 'w-10 h-10' : 'w-12 h-12'} rounded object-cover`}
           onError={(e) => {
-            const ytFallback = song.videoId ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg` : '';
-            if (ytFallback && e.target.src !== ytFallback) {
-              e.target.src = ytFallback;
-            } else {
-              e.target.onerror = null;
-              e.target.src = '/logo.svg';
-            }
+            e.target.onerror = null;
+            e.target.src = '/logo.svg';
           }}
         />
         {isActive && isPlaying && (
