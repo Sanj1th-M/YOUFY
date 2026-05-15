@@ -686,17 +686,27 @@ export default function FullPlayer() {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black">
       <div
-        className="absolute inset-0 scale-110 opacity-25 blur-3xl md:hidden"
+        className="absolute inset-x-0 top-0 h-[540px] overflow-hidden"
+        aria-hidden="true"
+      >
+        <div
+          className="h-full w-full scale-125 bg-cover bg-center opacity-30 blur-[120px]"
+          style={{
+            backgroundImage: `url(${heroImage})`,
+          }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_55%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,8,0.25),rgba(0,0,0,0.84)_68%,#000)]" />
+      </div>
+      <div
+        className="absolute inset-0 opacity-[0.18]"
         style={{
-          backgroundImage: `url(${heroImage})`,
-          backgroundPosition: 'center',
-          backgroundSize: 'cover',
+          background:
+            'radial-gradient(circle at 50% 14%, rgba(255,255,255,0.08), transparent 32%), linear-gradient(180deg, rgba(12,12,12,0.2), #000 76%)',
         }}
       />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_42%)] md:hidden" />
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-3xl md:hidden" />
 
-      <div className="relative flex h-full flex-col">
+      <div className="relative z-10 flex h-full flex-col">
         <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-3">
           <button
             type="button"

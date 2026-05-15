@@ -2,18 +2,31 @@ import { isSystemLikedPlaylist } from '../../utils/playlists';
 import ArtworkImage from '../ArtworkImage';
 import { getArtworkSources, getBestThumbnail } from '../../utils/artwork';
 
+function getPrimaryArtworkSource(item) {
+  return getArtworkSources(item, { size: 512 })[0] || '';
+}
+
 export function getPlaylistArtworkSources(playlist, songs = []) {
   if (isSystemLikedPlaylist(playlist)) {
     return ['/liked-heart.png'];
   }
 
-  const playlistImage = getBestThumbnail(playlist?.thumbnails) || playlist?.thumbnail || '';
-  if (playlistImage) {
-    return getArtworkSources(playlist, { fallback: playlistImage, size: 512 });
+  if (typeof playlist?.thumbnail === 'string' && playlist.thumbnail) {
+    return getArtworkSources(playlist, { fallback: playlist.thumbnail, size: 512 });
+  }
+
+  const playlistImages = Array.isArray(playlist?.thumbnails)
+    ? playlist.thumbnails
+        .map((thumbnail) => getBestThumbnail([thumbnail], '', 512))
+        .filter(Boolean)
+    : [];
+
+  if (playlistImages.length > 0) {
+    return playlistImages.slice(0, 4);
   }
 
   const songImages = songs
-    .flatMap(song => getArtworkSources(song, { size: 512 }))
+    .map(getPrimaryArtworkSource)
     .filter(Boolean);
 
   if (songImages.length > 0) {
@@ -62,11 +75,14 @@ export default function PlaylistArtwork({
     );
   }
 
+  const artworkTiles = artworkSources.slice(0, 4);
+  while (artworkTiles.length < 4) {
+    artworkTiles.push('');
+  }
+
   return (
     <div className={`grid grid-cols-2 overflow-hidden bg-[#101010] ${className}`}>
-      {Array.from({ length: 4 }).map((_, index) => {
-        const source = artworkSources[index];
-
+      {artworkTiles.map((source, index) => {
         return source ? (
           <ArtworkImage
             key={source + index}

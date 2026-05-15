@@ -5,7 +5,7 @@ import usePlayerStore from '../../store/usePlayerStore';
 export default function LyricsView() {
   const currentSong = usePlayerStore(s => s.currentSong);
   const currentTime = usePlayerStore(s => s.currentTime);
-  const { lyrics, loading } = useLyrics(currentSong);
+  const { lyrics, loading, error, refetch } = useLyrics(currentSong);
   const activeRef = useRef(null);
 
   const activeIndex = lyrics.synced.length
@@ -25,6 +25,24 @@ export default function LyricsView() {
           <span className="youfy-eq-bar bg-[#FCFFF9]" />
           <span className="youfy-eq-bar bg-[#FCFFF9]" />
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center text-gray-500">
+        <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        </svg>
+        <p className="text-sm">{error}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+        >
+          Retry
+        </button>
       </div>
     );
   }

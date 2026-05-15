@@ -55,8 +55,11 @@ export const getTrending = () =>
   api.get('/trending').then(r => r.data);
 
 // Lyrics
-export const getLyrics = (title, artist) =>
-  api.get('/lyrics', { params: { title, artist } }).then(r => r.data);
+export const getLyrics = ({ title, artist, album, durationSeconds, videoId }) =>
+  api.get('/lyrics', {
+    params: { title, artist, album, durationSeconds, videoId },
+    timeout: 35000,
+  }).then(r => r.data);
 
 // Recently played sync â€” best effort only
 export const syncRecentlyPlayed = (song) => {

@@ -1,30 +1,84 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getLyrics } from '../services/api';
+import {
+  getCachedLyrics,
+  getLyricsCacheKey,
+  removeCachedLyrics,
+  setCachedLyrics,
+} from '../services/lyricsCache';
 
-export const lyricsCache = new Map();
+const EMPTY_LYRICS = { synced: [], plain: '', status: 'idle' };
+
+export const lyricsCache = {
+  delete(videoIdOrKey) {
+    const value = String(videoIdOrKey || '');
+    removeCachedLyrics(value.startsWith('video:') ? value : `video:${value}`);
+  },
+};
 
 export function useLyrics(song) {
-  const [lyrics,  setLyrics]  = useState({ synced: [], plain: '' });
+  const [lyrics, setLyrics] = useState(EMPTY_LYRICS);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const requestId = useRef(0);
+  const title = song?.title || '';
+  const artist = song?.artist || '';
+  const album = song?.album || '';
+  const durationSeconds = song?.durationSeconds || 0;
+  const videoId = song?.videoId || '';
 
   const fetchLyrics = useCallback((force = false) => {
-    if (!song?.videoId) return;
+    const cacheKey = getLyricsCacheKey({ title, artist, album, durationSeconds, videoId });
+    const hasRequiredMetadata = Boolean(title && artist);
+    const nextRequestId = requestId.current + 1;
+    requestId.current = nextRequestId;
 
-    if (!force && lyricsCache.has(song.videoId)) {
-      setLyrics(lyricsCache.get(song.videoId));
+    if (!cacheKey || !hasRequiredMetadata) {
+      setLyrics(EMPTY_LYRICS);
       setLoading(false);
+      setError('');
       return;
     }
 
+    if (force) {
+      removeCachedLyrics(cacheKey);
+    } else {
+      const cached = getCachedLyrics(cacheKey);
+      if (cached) {
+        setLyrics(cached);
+        setLoading(false);
+        setError('');
+        return;
+      }
+    }
+
     setLoading(true);
-    getLyrics(song.title, song.artist)
-      .then(res => {
-        lyricsCache.set(song.videoId, res);
-        setLyrics(res);
+    setError('');
+
+    getLyrics({
+      title,
+      artist,
+      album,
+      durationSeconds,
+      videoId,
+    })
+      .then((res) => {
+        if (requestId.current !== nextRequestId) return;
+        const nextLyrics = normalizeLyricsResponse(res);
+        setCachedLyrics(cacheKey, nextLyrics);
+        setLyrics(nextLyrics);
       })
-      .catch(() => setLyrics({ synced: [], plain: '' }))
-      .finally(() => setLoading(false));
-  }, [song?.videoId, song?.title, song?.artist]);
+      .catch((err) => {
+        if (requestId.current !== nextRequestId) return;
+        setLyrics(EMPTY_LYRICS);
+        setError(err?.response?.data?.error || 'Could not load lyrics. Try again.');
+      })
+      .finally(() => {
+        if (requestId.current === nextRequestId) {
+          setLoading(false);
+        }
+      });
+  }, [album, artist, durationSeconds, title, videoId]);
 
   useEffect(() => {
     fetchLyrics();
@@ -34,5 +88,14 @@ export function useLyrics(song) {
     fetchLyrics(true);
   }, [fetchLyrics]);
 
-  return { lyrics, loading, refetch };
+  return { lyrics, loading, error, refetch };
+}
+
+function normalizeLyricsResponse(response) {
+  return {
+    synced: Array.isArray(response?.synced) ? response.synced : [],
+    plain: typeof response?.plain === 'string' ? response.plain : '',
+    source: typeof response?.source === 'string' ? response.source : null,
+    status: typeof response?.status === 'string' ? response.status : 'unknown',
+  };
 }

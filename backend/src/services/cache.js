@@ -9,9 +9,13 @@ const searchCache = new NodeCache({ stdTTL: 10 * 60, checkperiod: 120 });
 // Trending cache — TTL 30 minutes
 const trendingCache = new NodeCache({ stdTTL: 30 * 60, checkperiod: 300 });
 
+// Lyrics cache — lyrics are stable, but keep a bounded TTL so corrected LRCLIB
+// entries can eventually refresh.
+const lyricsCache = new NodeCache({ stdTTL: 7 * 24 * 60 * 60, checkperiod: 60 * 60 });
 
 module.exports = {
   streamCache,
   searchCache,
   trendingCache,
+  lyricsCache,
 };
