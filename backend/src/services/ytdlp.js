@@ -121,7 +121,7 @@ function buildYtDlpArgs(videoId, extraArgs = []) {
   }
 
   const args = [
-    '-f', 'bestaudio/best',
+    '-f', '251/140/bestaudio/best',
     '--get-url',
     '--no-playlist',
     '--no-warnings',  // Prevent non-fatal warnings from polluting stderr
@@ -186,8 +186,12 @@ function validateStreamUrl(streamUrl) {
 async function runYtDlpAttempt(videoId, extraArgs = []) {
   const args = buildYtDlpArgs(videoId, extraArgs);
 
+  const ytdlpBin = fs.existsSync(path.resolve(process.cwd(), 'yt-dlp'))
+    ? path.resolve(process.cwd(), 'yt-dlp')
+    : 'yt-dlp';
+
   return new Promise((resolve, reject) => {
-    execFile('yt-dlp', args, { timeout: YT_DLP_TIMEOUT_MS }, (error, stdout, stderr) => {
+    execFile(ytdlpBin, args, { timeout: YT_DLP_TIMEOUT_MS }, (error, stdout, stderr) => {
       // CRITICAL FIX: yt-dlp can exit with code 1 even when it successfully
       // extracts the URL (e.g., due to non-fatal warnings about PO tokens).
       // Always check stdout for a valid URL before treating exit code as failure.
@@ -244,7 +248,7 @@ async function runYtDlp(videoId) {
     // Primary attempt: use iOS and Android clients (significantly faster, ~9s vs 20s for web clients)
     const extracted = await runYtDlpAttempt(videoId, [
       '--extractor-args',
-      'youtube:player_client=tv_embedded,web',
+      'youtube:player_client=ios,web',
     ]);
     logExtraction({ videoId, success: true, failure: null, timeTakenMs: Date.now() - startedAt });
     return extracted;
@@ -269,7 +273,7 @@ async function runYtDlp(videoId) {
     try {
       const extracted = await runYtDlpAttempt(videoId, [
         '--extractor-args',
-        'youtube:player_client=tv_embedded,web',
+        'youtube:player_client=web',
       ]);
       logExtraction({
         videoId,
