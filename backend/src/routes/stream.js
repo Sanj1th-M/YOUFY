@@ -28,8 +28,7 @@ r.get('/:videoId', validateVideoId, (req, res) => {
   }
 
   const args = [
-    '-f', 'bestaudio/best',
-    '--extractor-args', 'youtube:player_client=ios,android',
+    '-f', '140/bestaudio[ext=m4a]/bestaudio',
     '--no-playlist',
     '--no-warnings',
     '--ffmpeg-location', FFMPEG_BIN,
