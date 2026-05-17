@@ -1,14 +1,13 @@
 import { create } from 'zustand';
 import { audioPlayer } from '../services/audioPlayer';
-import { getStreamUrl, syncRecentlyPlayed } from '../services/api';
-import { getCachedUrl, setCachedUrl, removeCachedUrl } from '../services/streamCache';
+import { syncRecentlyPlayed } from '../services/api';
+import { BASE_URL } from '../constants/api';
 import { updateSongScore } from '../utils/recommendationEngine';
 import { incrementPlayCounter } from '../hooks/useRecommendations';
 import useAuthStore from './useAuthStore';
 
 // ── Request generation counter — used to detect stale playSong calls ──
 let playRequestId = 0;
-const streamRequestCache = new Map();
 
 // ── Helper: get current userId from auth store ──
 function getCurrentUserId() {
@@ -27,64 +26,22 @@ function toSongMeta(song) {
   };
 }
 
-// Fetch stream URL — checks memory cache first, then backend
+// Fetch stream URL — points directly to backend stream endpoint now
 async function fetchStreamUrl(videoId) {
-  const cached = getCachedUrl(videoId);
-  if (cached) {
-    console.log(`[cache] stream hit: ${videoId}`);
-    return cached;
-  }
-
-  if (streamRequestCache.has(videoId)) {
-    console.log(`[cache] stream in-flight: ${videoId}`);
-    return streamRequestCache.get(videoId);
-  }
-
-  const request = getStreamUrl(videoId)
-    .then((url) => {
-      setCachedUrl(videoId, url);
-      return url;
-    })
-    .finally(() => {
-      streamRequestCache.delete(videoId);
-    });
-
-  streamRequestCache.set(videoId, request);
-  return request;
+  return `${BASE_URL}/stream/${videoId}`;
 }
 
 function warmStreamUrl(videoId) {
-  if (!videoId || getCachedUrl(videoId) || streamRequestCache.has(videoId)) {
-    return;
-  }
-
-  fetchStreamUrl(videoId).catch(() => {});
+  // No-op for direct streaming
 }
 
 function warmQueueSongs(queue) {
-  if (!queue || queue.length === 0) return;
-
-  queue
-    .filter((song) => song?.videoId)
-    .slice(0, 1)
-    .forEach((song) => {
-      warmStreamUrl(song.videoId);
-    });
+  // No-op for direct streaming
 }
 
 // Pre-fetch upcoming songs' URLs in background so they play instantly
 function prefetchNext(queue) {
-  if (!queue || queue.length === 0) return;
-  // Prefetch up to 3 upcoming songs for smoother playback
-  const toFetch = queue.slice(0, 3).filter(s => s?.videoId && !getCachedUrl(s.videoId));
-  toFetch.forEach(song => {
-    getStreamUrl(song.videoId)
-      .then(url => {
-        setCachedUrl(song.videoId, url);
-        console.log(`[prefetch] cached: ${song.title}`);
-      })
-      .catch(() => {}); // silent fail — not critical
-  });
+  // No-op for direct streaming
 }
 
 function normalizeQueueSongs(songs = []) {
@@ -165,7 +122,7 @@ const usePlayerStore = create((set, get) => ({
     }
 
     try {
-      // Get URL from cache or backend
+      // Get URL from backend
       const url = await fetchStreamUrl(song.videoId);
 
       // ── STALE CHECK: if user clicked another song while we were fetching, bail out ──
@@ -235,9 +192,6 @@ const usePlayerStore = create((set, get) => ({
         get().playNext();
       });
       audioPlayer.onError(() => {
-        if (song?.videoId) {
-          removeCachedUrl(song.videoId);
-        }
         set({ isPlaying: false, isLoading: false, error: 'Playback error. Try again.' });
       });
       audioPlayer.onWaiting(() => set({ isLoading: true }));
@@ -254,7 +208,6 @@ const usePlayerStore = create((set, get) => ({
       }
       // Only show error if this is still the active request
       if (thisRequestId === playRequestId) {
-        removeCachedUrl(song.videoId);
         set({ isPlaying: false, isLoading: false, error: 'Could not load song. Try again.' });
         console.error('[player] error:', err.message);
       }
