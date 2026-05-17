@@ -58,7 +58,7 @@ r.get('/:videoId', validateVideoId, (req, res) => {
     });
 
     req.on('close', () => {
-      proc.kill();
+      setTimeout(() => proc.kill(), 2000);
     });
   } catch (err) {
     console.error('[stream] error:', err.message);
