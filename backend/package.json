@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "postinstall": "node -e \"if (process.platform === 'linux') { const { execSync } = require('child_process'); execSync('mkdir -p ./node_modules/.bin && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ./node_modules/.bin/yt-dlp && chmod +x ./node_modules/.bin/yt-dlp', { stdio: 'inherit' }); }\"",
     "dev": "nodemon index.js",
     "lint": "eslint .",
     "test": "node --test --test-isolation=none test/*.test.js"
