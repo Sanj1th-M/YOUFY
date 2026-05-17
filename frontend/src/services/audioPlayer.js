@@ -4,6 +4,7 @@
 class AudioPlayer {
   constructor() {
     this.audio = new Audio();
+    this.audio.crossOrigin = 'anonymous';
     this.audio.preload = 'auto';
     this._abortController = null;
     this._listeners = {};
