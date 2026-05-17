@@ -7,6 +7,7 @@ const { validateVideoId } = require('../middleware/validate');
 
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 const YTDLP_BIN = require.resolve('youtube-dl-exec/bin/yt-dlp');
+const FFMPEG_BIN = require('ffmpeg-static');
 
 const r = Router();
 
@@ -27,11 +28,11 @@ r.get('/:videoId', validateVideoId, (req, res) => {
   }
 
   const args = [
-    '-f', 'bestaudio[ext=webm]/bestaudio[ext=opus]/bestaudio/best',
+    '-f', 'bestaudio/best',
     '--extractor-args', 'youtube:player_client=ios,android',
     '--no-playlist',
     '--no-warnings',
-    '--no-part',
+    '--ffmpeg-location', FFMPEG_BIN,
     '-o', '-',
   ];
 
@@ -41,7 +42,7 @@ r.get('/:videoId', validateVideoId, (req, res) => {
 
   args.push('--', `https://www.youtube.com/watch?v=${videoId}`);
 
-  res.setHeader('Content-Type', 'audio/webm');
+  res.setHeader('Content-Type', 'audio/mp4');
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('Access-Control-Allow-Origin', 'https://youfy.vercel.app');
 
