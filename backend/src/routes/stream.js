@@ -46,6 +46,9 @@ r.get('/:videoId', validateVideoId, (req, res) => {
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('Access-Control-Allow-Origin', 'https://youfy.vercel.app');
 
+  // Ensure ffmpeg binary is executable at runtime (Render may reset permissions)
+  try { fs.chmodSync(FFMPEG_BIN, 0o755); } catch {}
+
   const proc = spawn(YTDLP_BIN, args);
 
   proc.stdout.pipe(res);
