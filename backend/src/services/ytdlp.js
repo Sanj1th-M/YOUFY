@@ -121,7 +121,7 @@ function buildYtDlpArgs(videoId, extraArgs = []) {
   }
 
   const args = [
-    '-f', '251/140/bestaudio/best',
+    '-f', 'bestaudio/best',
     '--get-url',
     '--no-playlist',
     '--no-warnings',  // Prevent non-fatal warnings from polluting stderr
@@ -224,18 +224,18 @@ function classifyError(message) {
   const normalized = (message || '').toLowerCase();
 
   if (normalized.includes('sign in to confirm') ||
-      normalized.includes('429') ||
-      normalized.includes('too many requests')) {
+    normalized.includes('429') ||
+    normalized.includes('too many requests')) {
     return 'BOT_BLOCK';
   }
   if (normalized.includes('timed out') ||
-      normalized.includes('killed') ||
-      normalized.includes('etimedout')) {
+    normalized.includes('killed') ||
+    normalized.includes('etimedout')) {
     return 'TIMEOUT';
   }
   if (normalized.includes('unavailable') ||
-      normalized.includes('private video') ||
-      normalized.includes('removed')) {
+    normalized.includes('private video') ||
+    normalized.includes('removed')) {
     return 'VIDEO_UNAVAILABLE';
   }
   return 'UNKNOWN';
@@ -245,10 +245,10 @@ async function runYtDlp(videoId) {
   const startedAt = Date.now();
 
   try {
-    // Primary attempt: use iOS and Android clients (significantly faster, ~9s vs 20s for web clients)
+    // Primary attempt: tv_embedded is reliable without cookies on server environments
     const extracted = await runYtDlpAttempt(videoId, [
       '--extractor-args',
-      'youtube:player_client=ios,web',
+      'youtube:player_client=tv_embedded,web',
     ]);
     logExtraction({ videoId, success: true, failure: null, timeTakenMs: Date.now() - startedAt });
     return extracted;
@@ -266,14 +266,13 @@ async function runYtDlp(videoId) {
       throw new Error('YOUTUBE_BOT_BLOCK: Please refresh cookies.txt');
     }
 
-    // Fallback: try with tv_embedded client (lighter weight, different code path)
-    // android_music is dead since ~2026.03 — do NOT use it
+    // Fallback: try with tv_embedded only
     console.warn(`[YOUFY STREAM] Primary extraction failed (${errorType}), retrying with tv_embedded client:`, primaryError.message);
 
     try {
       const extracted = await runYtDlpAttempt(videoId, [
         '--extractor-args',
-        'youtube:player_client=web',
+        'youtube:player_client=tv_embedded',
       ]);
       logExtraction({
         videoId,
