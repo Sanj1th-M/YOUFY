@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { execFile } = require('child_process');
+const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -7,7 +7,6 @@ const { validateVideoId } = require('../middleware/validate');
 
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 const YTDLP_BIN = require.resolve('youtube-dl-exec/bin/yt-dlp');
-const FFMPEG_DIR = path.dirname(require('ffmpeg-static'));
 
 const r = Router();
 
@@ -28,11 +27,11 @@ r.get('/:videoId', validateVideoId, (req, res) => {
   }
 
   const args = [
-    '-f', 'bestaudio/best',
+    '-f', 'bestaudio[ext=webm]/bestaudio[ext=opus]/bestaudio/best',
     '--extractor-args', 'youtube:player_client=ios,android',
     '--no-playlist',
     '--no-warnings',
-    '--ffmpeg-location', FFMPEG_DIR,
+    '--no-part',
     '-o', '-',
   ];
 
@@ -45,16 +44,15 @@ r.get('/:videoId', validateVideoId, (req, res) => {
   res.setHeader('Content-Type', 'audio/webm');
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('Access-Control-Allow-Origin', 'https://youfy.vercel.app');
-  res.setHeader('Accept-Ranges', 'none');
 
-  const proc = execFile(YTDLP_BIN, args, { maxBuffer: 10 * 1024 * 1024 });
+  const proc = spawn(YTDLP_BIN, args);
 
   proc.stdout.pipe(res);
 
   proc.stderr.on('data', (d) => console.error('[yt-dlp]', d.toString()));
 
   proc.on('error', (err) => {
-    console.error('[stream] process error:', err.message);
+    console.error('[stream] spawn error:', err.message);
     if (!res.headersSent) res.status(500).json({ error: 'Stream failed' });
   });
 
