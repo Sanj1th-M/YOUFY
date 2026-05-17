@@ -134,6 +134,47 @@ if (firebaseConfigured) {
   app.use('/recently-played', (req, res) => res.status(204).end());
 }
 
+app.get('/debug/ytdlp', (req, res) => {
+  const { execFile } = require('child_process');
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+
+  const results = {};
+
+  // Step 1: Check yt-dlp version
+  execFile('yt-dlp', ['--version'], (err, stdout) => {
+    results.version = stdout?.trim() || 'NOT FOUND';
+    results.versionError = err?.message || null;
+
+    // Step 2: Check cookies file exists
+    const cookiesPath = process.env.YT_DLP_COOKIES?.trim();
+    const writableCookies = path.join(os.tmpdir(), 'youfy-cookies-writable.txt');
+    results.cookiesEnvSet = !!cookiesPath;
+    results.writableCookiesExists = fs.existsSync(writableCookies);
+
+    // Step 3: Test actual extraction with full stderr
+    const args = [
+      '-f', '140/bestaudio[ext=m4a]/bestaudio/best',
+      '--get-url',
+      '--no-playlist',
+      '--extractor-args', 'youtube:player_client=ios,android',
+      '--', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+    ];
+
+    if (results.writableCookiesExists) {
+      args.unshift('--cookies', writableCookies);
+    }
+
+    execFile('yt-dlp', args, { timeout: 60000 }, (err2, stdout2, stderr2) => {
+      results.extractionUrl = stdout2?.trim()?.substring(0, 100) || null;
+      results.extractionError = stderr2?.trim() || err2?.message || null;
+      results.extractionSuccess = !!stdout2?.trim();
+      res.json(results);
+    });
+  });
+});
+
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 
 app.use((err, req, res, next) => {
