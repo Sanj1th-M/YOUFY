@@ -121,7 +121,7 @@ function buildYtDlpArgs(videoId, extraArgs = []) {
   }
 
   const args = [
-    '-f', '140/bestaudio[ext=m4a]/bestaudio/best',
+    '-f', 'bestaudio/best',
     '--get-url',
     '--no-playlist',
     '--no-warnings',  // Prevent non-fatal warnings from polluting stderr
@@ -244,7 +244,7 @@ async function runYtDlp(videoId) {
     // Primary attempt: use iOS and Android clients (significantly faster, ~9s vs 20s for web clients)
     const extracted = await runYtDlpAttempt(videoId, [
       '--extractor-args',
-      'youtube:player_client=ios,android',
+      'youtube:player_client=tv_embedded,web',
     ]);
     logExtraction({ videoId, success: true, failure: null, timeTakenMs: Date.now() - startedAt });
     return extracted;
