@@ -37,11 +37,14 @@
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
         },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

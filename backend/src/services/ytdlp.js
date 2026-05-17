@@ -14,6 +14,7 @@
 const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { URL } = require('url');
 
 // YouTube video IDs are always exactly 11 alphanumeric chars + - _
@@ -73,6 +74,9 @@ function resolveFilePath(filePath) {
   return path.resolve(BACKEND_ROOT, filePath);
 }
 
+const WRITABLE_COOKIES_PATH = path.join(os.tmpdir(), 'youfy-cookies-writable.txt');
+let hasCopiedCookies = false;
+
 function resolveCookieArgs() {
   const args = [];
   const cookiesPath = process.env.YT_DLP_COOKIES?.trim();
@@ -81,7 +85,18 @@ function resolveCookieArgs() {
 
   if (cookiesPath) {
     if (resolvedCookiesPath && fs.existsSync(resolvedCookiesPath)) {
-      args.push('--cookies', resolvedCookiesPath);
+      // Render mounts Secret Files as read-only, but yt-dlp tries to update/save cookies.
+      // We must copy it to a writable location (/tmp) so yt-dlp doesn't crash with OSError 30.
+      try {
+        if (!hasCopiedCookies || !fs.existsSync(WRITABLE_COOKIES_PATH)) {
+          fs.copyFileSync(resolvedCookiesPath, WRITABLE_COOKIES_PATH);
+          hasCopiedCookies = true;
+        }
+        args.push('--cookies', WRITABLE_COOKIES_PATH);
+      } catch (err) {
+        console.warn('[YOUFY STREAM] Failed to create writable cookies copy:', err);
+        args.push('--cookies', resolvedCookiesPath); // fallback
+      }
     } else {
       console.warn(`[YOUFY STREAM] cookies file not found: ${cookiesPath}`);
     }
