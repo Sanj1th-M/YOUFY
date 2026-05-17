@@ -135,44 +135,72 @@ if (firebaseConfigured) {
 }
 
 app.get('/debug/ytdlp', (req, res) => {
-  const { execFile } = require('child_process');
+  const youtubedl = require('youtube-dl-exec');
   const fs = require('fs');
   const os = require('os');
   const path = require('path');
 
   const results = {};
 
-  // Step 1: Check yt-dlp version
-  execFile('yt-dlp', ['--version'], (err, stdout) => {
-    results.version = stdout?.trim() || 'NOT FOUND';
-    results.versionError = err?.message || null;
-
-    // Step 2: Check cookies file exists
-    const cookiesPath = process.env.YT_DLP_COOKIES?.trim();
-    const writableCookies = path.join(os.tmpdir(), 'youfy-cookies-writable.txt');
-    results.cookiesEnvSet = !!cookiesPath;
-    results.writableCookiesExists = fs.existsSync(writableCookies);
-
-    // Step 3: Test actual extraction with full stderr
-    const args = [
-      '-f', '140/bestaudio[ext=m4a]/bestaudio/best',
-      '--get-url',
-      '--no-playlist',
-      '--extractor-args', 'youtube:player_client=ios,android',
-      '--', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-    ];
-
-    if (results.writableCookiesExists) {
-      args.unshift('--cookies', writableCookies);
+  // Check youtube-dl-exec binary path
+  try {
+    const binPath = require.resolve('youtube-dl-exec/bin/yt-dlp');
+    results.binaryPath = binPath;
+    results.binaryExists = fs.existsSync(binPath);
+  } catch (e) {
+    try {
+      // fallback: check alternate binary name on Linux
+      const binPath2 = require.resolve('youtube-dl-exec/bin/yt-dlp_linux');
+      results.binaryPath = binPath2;
+      results.binaryExists = fs.existsSync(binPath2);
+    } catch (e2) {
+      results.binaryPath = 'NOT FOUND';
+      results.binaryExists = false;
+      results.binaryError = e2.message;
     }
+  }
 
-    execFile('yt-dlp', args, { timeout: 60000 }, (err2, stdout2, stderr2) => {
-      results.extractionUrl = stdout2?.trim()?.substring(0, 100) || null;
-      results.extractionError = stderr2?.trim() || err2?.message || null;
-      results.extractionSuccess = !!stdout2?.trim();
+  // Check cookies
+  const cookiesPath = process.env.YT_DLP_COOKIES?.trim();
+  const writableCookies = path.join(os.tmpdir(), 'youfy-cookies-writable.txt');
+  results.cookiesEnvSet = !!cookiesPath;
+  results.writableCookiesExists = fs.existsSync(writableCookies);
+
+  // Test actual extraction using youtube-dl-exec
+  try {
+    const proc = youtubedl.raw(
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      {
+        getUrl: true,
+        format: '140/bestaudio[ext=m4a]/bestaudio/best',
+        noPlaylist: true,
+        noWarnings: true,
+      }
+    );
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout?.on('data', d => stdout += d.toString());
+    proc.stderr?.on('data', d => stderr += d.toString());
+
+    proc.on('close', (code) => {
+      results.exitCode = code;
+      results.extractionSuccess = code === 0;
+      results.extractionOutput = stdout.trim().substring(0, 150) || null;
+      results.extractionError = stderr.trim().substring(0, 300) || null;
       res.json(results);
     });
-  });
+
+    proc.on('error', (err) => {
+      results.procError = err.message;
+      res.json(results);
+    });
+
+  } catch (e) {
+    results.rawCallError = e.message;
+    res.json(results);
+  }
 });
 
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
