@@ -4,7 +4,6 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "postinstall": "pip install -U yt-dlp || true",
     "dev": "nodemon index.js",
     "lint": "eslint .",
     "test": "node --test --test-isolation=none test/*.test.js"
@@ -22,6 +21,7 @@
     "morgan": "^1.10.0",
     "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
+    "youtube-dl-exec": "latest",
     "ytmusic-api": "^5.3.0"
   },
   "devDependencies": {

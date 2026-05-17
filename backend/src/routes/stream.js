@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { execFile } = require('child_process');
+const youtubedl = require('youtube-dl-exec');
 const os = require('os');
 const fs = require('fs');
 const { validateVideoId } = require('../middleware/validate');
@@ -12,31 +12,27 @@ r.get('/:videoId', validateVideoId, (req, res) => {
   try {
     const cookiesPath = process.env.YT_DLP_COOKIES;
     let writableCookiesPath = null;
-    
-    const ytDlpArgs = [
-      '-f', '140/bestaudio[ext=m4a]/bestaudio/best',
-      '--extractor-args', 'youtube:player_client=ios,android',
-      '--no-playlist',
-      '--no-warnings',
-      '-o', '-',
-    ];
+    let cookieArgs = false;
 
     if (cookiesPath && fs.existsSync(cookiesPath)) {
       writableCookiesPath = os.tmpdir() + '/youfy-cookies-writable.txt';
       fs.copyFileSync(cookiesPath, writableCookiesPath);
-      ytDlpArgs.push('--cookies', writableCookiesPath);
+      cookieArgs = true;
     }
 
-    ytDlpArgs.push('--', `https://www.youtube.com/watch?v=${videoId}`);
+    const proc = youtubedl.raw(
+      `https://www.youtube.com/watch?v=${videoId}`,
+      {
+        format: '140/bestaudio[ext=m4a]/bestaudio/best',
+        extractorArgs: 'youtube:player_client=ios,android',
+        noPlaylist: true,
+        noWarnings: true,
+        output: '-',
+        ...(cookieArgs ? { cookies: writableCookiesPath } : {})
+      }
+    );
 
-    const proc = execFile('yt-dlp', ytDlpArgs);
-
-    let stderrData = '';
     let headersSent = false;
-
-    proc.stderr.on('data', (chunk) => {
-      stderrData += chunk.toString();
-    });
 
     proc.stdout.once('data', () => {
       if (!headersSent) {
@@ -48,9 +44,16 @@ r.get('/:videoId', validateVideoId, (req, res) => {
 
     proc.stdout.pipe(res);
 
+    proc.stderr.on('data', (d) => console.error('[yt-dlp]', d.toString()));
+
+    proc.on('error', (err) => {
+      console.error('[stream] yt-dlp error:', err.message);
+      if (!res.headersSent) res.status(500).json({ error: 'Stream failed' });
+    });
+
     proc.on('close', (code) => {
       if (code !== 0 && code !== null) {
-        console.error(`[stream] yt-dlp exited with code ${code}:`, stderrData.slice(0, 500));
+        console.error(`[stream] yt-dlp exited with code ${code}`);
         if (!headersSent && !res.headersSent) {
           res.status(500).json({ error: 'Could not load stream. Try again.' });
         }
@@ -69,3 +72,4 @@ r.get('/:videoId', validateVideoId, (req, res) => {
 });
 
 module.exports = r;
+
