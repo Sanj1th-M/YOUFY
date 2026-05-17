@@ -7,7 +7,6 @@ const { validateVideoId } = require('../middleware/validate');
 
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 const YTDLP_BIN = require.resolve('youtube-dl-exec/bin/yt-dlp');
-const FFMPEG_BIN = require('ffmpeg-static');
 
 const r = Router();
 
@@ -27,11 +26,12 @@ r.get('/:videoId', validateVideoId, (req, res) => {
     }
   }
 
+  // Format 140 = YouTube's native m4a/AAC audio — progressive stream, no ffmpeg needed
+  // Falls back to any m4a bestaudio, then any bestaudio
   const args = [
     '-f', '140/bestaudio[ext=m4a]/bestaudio',
     '--no-playlist',
     '--no-warnings',
-    '--ffmpeg-location', FFMPEG_BIN,
     '-o', '-',
   ];
 
@@ -44,9 +44,6 @@ r.get('/:videoId', validateVideoId, (req, res) => {
   res.setHeader('Content-Type', 'audio/mp4');
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('Access-Control-Allow-Origin', 'https://youfy.vercel.app');
-
-  // Ensure ffmpeg binary is executable at runtime (Render may reset permissions)
-  try { fs.chmodSync(FFMPEG_BIN, 0o755); } catch {}
 
   const proc = spawn(YTDLP_BIN, args);
 
