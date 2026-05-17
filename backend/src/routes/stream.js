@@ -1,30 +1,39 @@
 const { Router } = require('express');
 const { execFile } = require('child_process');
+const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const path = require('path');
-const https = require('https');
-const http = require('http');
 const { validateVideoId } = require('../middleware/validate');
+
+const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
+const YTDLP_BIN = require.resolve('youtube-dl-exec/bin/yt-dlp');
+const FFMPEG_DIR = path.dirname(require('ffmpeg-static'));
+
 const r = Router();
 
 r.get('/:videoId', validateVideoId, (req, res) => {
   const { videoId } = req.params;
 
-  const YTDLP_BIN = require.resolve('youtube-dl-exec/bin/yt-dlp');
+  if (!VIDEO_ID_REGEX.test(videoId)) {
+    return res.status(400).json({ error: 'Invalid video ID' });
+  }
+
   const cookiesEnv = process.env.YT_DLP_COOKIES?.trim();
   const writableCookies = path.join(os.tmpdir(), 'youfy-cookies-writable.txt');
 
   if (cookiesEnv && fs.existsSync(cookiesEnv) && !fs.existsSync(writableCookies)) {
-    try { fs.copyFileSync(cookiesEnv, writableCookies); } catch {}
+    try { fs.copyFileSync(cookiesEnv, writableCookies); } catch (e) {
+      console.warn('[stream] cookies copy failed:', e.message);
+    }
   }
 
   const args = [
-    '--get-url',
-    '-f', 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
+    '-f', 'bestaudio/best',
     '--extractor-args', 'youtube:player_client=ios,android',
     '--no-playlist',
     '--no-warnings',
+    '--ffmpeg-location', FFMPEG_DIR,
+    '-o', '-',
   ];
 
   if (fs.existsSync(writableCookies)) {
@@ -33,45 +42,28 @@ r.get('/:videoId', validateVideoId, (req, res) => {
 
   args.push('--', `https://www.youtube.com/watch?v=${videoId}`);
 
-  execFile(YTDLP_BIN, args, { timeout: 45000 }, (err, stdout, stderr) => {
-    const cdnUrl = stdout?.trim().split('\n')[0];
+  res.setHeader('Content-Type', 'audio/webm');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  res.setHeader('Access-Control-Allow-Origin', 'https://youfy.vercel.app');
+  res.setHeader('Accept-Ranges', 'none');
 
-    if (!cdnUrl || !cdnUrl.startsWith('http')) {
-      console.error('[stream] yt-dlp failed:', stderr?.trim() || err?.message);
-      return res.status(500).json({ error: 'Could not extract stream URL' });
-    }
+  const proc = execFile(YTDLP_BIN, args, { maxBuffer: 10 * 1024 * 1024 });
 
-    console.log('[stream] proxying CDN URL for:', videoId);
+  proc.stdout.pipe(res);
 
-    const client = cdnUrl.startsWith('https') ? https : http;
+  proc.stderr.on('data', (d) => console.error('[yt-dlp]', d.toString()));
 
-    const proxyReq = client.get(cdnUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-        'Range': req.headers['range'] || 'bytes=0-',
-      }
-    }, (ytRes) => {
-      res.setHeader('Access-Control-Allow-Origin', 'https://youfy.vercel.app');
-      res.setHeader('Content-Type', ytRes.headers['content-type'] || 'audio/mp4');
-      res.setHeader('Accept-Ranges', 'bytes');
-      if (ytRes.headers['content-length']) {
-        res.setHeader('Content-Length', ytRes.headers['content-length']);
-      }
-      if (ytRes.headers['content-range']) {
-        res.setHeader('Content-Range', ytRes.headers['content-range']);
-      }
-      res.status(ytRes.statusCode || 200);
-      ytRes.pipe(res);
-    });
-
-    proxyReq.on('error', (err) => {
-      console.error('[stream] proxy error:', err.message);
-      if (!res.headersSent) res.status(500).json({ error: 'Proxy failed' });
-    });
-
-    req.on('close', () => proxyReq.destroy());
+  proc.on('error', (err) => {
+    console.error('[stream] process error:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Stream failed' });
   });
+
+  proc.on('close', (code) => {
+    if (code !== 0) console.warn('[stream] yt-dlp exited with code:', code);
+    if (!res.writableEnded) res.end();
+  });
+
+  req.on('close', () => setTimeout(() => proc.kill(), 2000));
 });
 
 module.exports = r;
-
