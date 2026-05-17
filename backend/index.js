@@ -152,7 +152,7 @@ app.get('/debug/ytdlp', (req, res) => {
 
   const args = [
     '--get-url',
-    '-f', '140/bestaudio[ext=m4a]/bestaudio/best',
+    '-f', 'bestaudio[ext=m4a]/bestaudio/best',
     '--no-playlist',
     '--no-warnings',
     '--extractor-args', 'youtube:player_client=ios,android',
