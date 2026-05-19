@@ -124,7 +124,8 @@ function buildYtDlpArgs(videoId, extraArgs = []) {
     '-f', 'bestaudio/best',
     '--get-url',
     '--no-playlist',
-    '--no-warnings',  // Prevent non-fatal warnings from polluting stderr
+    '--no-warnings',              // Prevent non-fatal warnings from polluting stderr
+    '--remote-components', 'ejs:github',  // JS challenge solver — required for YouTube server-side extraction
     ...resolveCookieArgs(),
     ...extraArgs,
   ];
@@ -335,3 +336,4 @@ async function getStreamUrl(videoId) {
 }
 
 module.exports = { getStreamInfo, getStreamUrl };
+  
